@@ -17,7 +17,8 @@ module.exports = {
         extend: {
             colors: {
                 primary: {
-                    DEFAULT: '#4361ee',
+                    // Use CSS variable for dynamic theming with opacity support
+                    DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
                     light: '#eaf1ff',
                     'dark-light': 'rgba(67,97,238,.15)',
                 },

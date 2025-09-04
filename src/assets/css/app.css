@@ -9,3 +9,9 @@
 @import 'flatpickr/dist/flatpickr.min.css';
 @import 'nouislider/dist/nouislider.min.css';
 @import 'tailwind.css';
+
+/* CSS Variables */
+:root {
+    /* primary color in R G B space for opacity support in Tailwind */
+    --color-primary: 230 36 38; /* #e62426 */
+}

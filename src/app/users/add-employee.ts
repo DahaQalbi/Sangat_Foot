@@ -47,7 +47,11 @@ export class AddEmployeeComponent {
       next: () => {
         this.submitting = false;
         this.toast.success('Employee added successfully');
-        this.router.navigate(['/users/profile']);
+        if(payload.role === Role.Waiter){
+          this.router.navigate(['/users/all-waiters']);
+        }else{
+          this.router.navigate(['/users/all-manager']);
+        }
       },
       error: (err) => {
         this.submitting = false;

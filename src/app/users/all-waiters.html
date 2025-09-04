@@ -1,11 +1,11 @@
 <div class="p-6">
   <div class="mx-auto w-full max-w-[900px]">
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-extrabold uppercase text-primary">All Managers</h1>
-      <a routerLink="/users/add-employee" class="btn btn-primary">Add Manager</a>
+      <h1 class="text-2xl font-extrabold uppercase text-primary">All Waiters</h1>
+      <a routerLink="/users/add-employee" class="btn btn-primary">Add Waiter</a>
     </div>
 
-    <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading managers...</div>
+    <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading waiters...</div>
     <div *ngIf="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-transparent">{{ error }}</div>
 
     <div *ngIf="!loading && !error">
@@ -16,20 +16,18 @@
               <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] rounded-tl-md shadow-sm">Name</th>
               <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Email</th>
               <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Phone</th>
-              <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Password</th>
               <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] rounded-tr-md shadow-sm">Employment Date</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-[#060b1b]">
-            <tr *ngFor="let m of managers" class="odd:bg-white even:bg-gray-50 hover:bg-gray-50 transition-colors dark:odd:bg-[#060b1b] dark:even:bg-[#0e1726] dark:hover:bg-[#0e1726]">
-              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-semibold">{{ m.name }}</td>
-              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ m.email }}</td>
-              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ m.phone || '-' }}</td>
-              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ m.password || '-' }}</td>
-              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300"><span class="badge bg-primary/10 text-primary">{{ m.created_at | date:'longDate' }}</span></td>
+            <tr *ngFor="let w of waiters" class="odd:bg-white even:bg-gray-50 hover:bg-gray-50 transition-colors dark:odd:bg-[#060b1b] dark:even:bg-[#0e1726] dark:hover:bg-[#0e1726]">
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-semibold">{{ w.name }}</td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ w.email }}</td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ w.phone || '-' }}</td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300"><span class="badge bg-primary/10 text-primary">{{ w.create_at | date:'longDate' }}</span></td>
             </tr>
-            <tr *ngIf="!managers.length">
-              <td class="px-4 py-6 text-center text-gray-500" colspan="4">No managers found</td>
+            <tr *ngIf="!waiters.length">
+              <td class="px-4 py-6 text-center text-gray-500" colspan="4">No waiters found</td>
             </tr>
           </tbody>
         </table>
@@ -37,3 +35,4 @@
     </div>
   </div>
 </div>
+

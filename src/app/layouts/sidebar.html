@@ -80,10 +80,13 @@
                                 <li>
                                     <a routerLink="/users/all-manager" routerLinkActive="active" (click)="toggleMobileMenu()">All Manager</a>
                                 </li>
+                                <li>
+                                    <a routerLink="/users/all-waiters" routerLinkActive="active" (click)="toggleMobileMenu()">All Waiters</a>
+                                </li>
                             </ul>
                         </div>
                     </li>
-
+                    <ng-container *ngIf="isshow">
                     <h2 class="-mx-4 mb-1 flex items-center bg-white-light/30 px-7 py-3 font-extrabold uppercase dark:bg-dark dark:bg-opacity-[0.08]">
                         <icon-minus class="hidden h-5 w-4 flex-none" />
                         <span>{{ ('apps' | translate) || '&nbsp;' }}</span>
@@ -779,6 +782,7 @@
                             </div>
                         </a>
                     </li>
+                    </ng-container>
                 </ul>
             </ng-scrollbar>
         </div>

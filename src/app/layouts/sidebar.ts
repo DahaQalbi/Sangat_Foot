@@ -15,6 +15,8 @@ export class SidebarComponent {
     store: any;
     activeDropdown: string[] = [];
     parentDropdown: string = '';
+    // Control visibility of menus from environment
+    isshow: boolean = (environment as any).isshow !== undefined ? (environment as any).isshow : false;
     // Default and environment logo handling
     readonly defaultLogo = '/assets/images/logo.svg';
     logoSrc: string = (environment.logo && environment.logo.trim()) ? environment.logo : this.defaultLogo;

@@ -21,4 +21,9 @@ export class StaffService {
   getManagers(): Observable<ManagerItem[]> {
     return this.http.get<ManagerItem[]>(this.baseUrl + 'allManager');
   }
+
+  // Fetch all waiters
+  getWaiters(): Observable<ManagerItem[]> {
+    return this.http.get<ManagerItem[]>(this.baseUrl + 'allWaiters');
+  }
 }

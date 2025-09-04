@@ -13,5 +13,8 @@ export interface ManagerItem {
   name: string;
   email: string;
   phone?: string;
+  password?: string;
   role: Role;
+  create_at?: string; // ISO date string from backend
+  created_at?: string; // ISO date string from backend
 }

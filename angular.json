@@ -55,8 +55,10 @@
                             "extractLicenses": false,
                             "sourceMap": true,
                             "namedChunks": true
+                            
                         }
-                    },
+                    }
+,
                     "defaultConfiguration": "production"
                 },
                 "serve": {
@@ -89,5 +91,8 @@
                 }
             }
         }
+    },
+    "cli": {
+      "analytics": "6048af5d-0ab0-4f37-b608-68944cf3a4e6"
     }
 }

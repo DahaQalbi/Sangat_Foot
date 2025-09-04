@@ -1,10 +1,11 @@
-﻿import { Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { toggleAnimation } from 'src/app/shared/animations';
 import { Store } from '@ngrx/store';
 import { Router, NavigationEnd } from '@angular/router';
 import { AppService } from '../service/app.service';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TranslateService } from '@ngx-translate/core';
+import { environment } from 'src/environments/environment';
 
 @Component({
     selector: 'header',
@@ -14,6 +15,10 @@ import { TranslateService } from '@ngx-translate/core';
 export class HeaderComponent {
     store: any;
     search = false;
+    // Default and environment logo handling
+    readonly defaultLogo = '/assets/images/logo.svg';
+    logoSrc: string = (environment.logo && environment.logo.trim()) ? environment.logo : this.defaultLogo;
+
     notifications = [
         {
             id: 1,
@@ -81,6 +86,11 @@ export class HeaderComponent {
         private sanitizer: DomSanitizer,
     ) {
         this.initStore();
+    }
+    onLogoError() {
+        if (this.logoSrc !== this.defaultLogo) {
+            this.logoSrc = this.defaultLogo;
+        }
     }
     async initStore() {
         this.storeData

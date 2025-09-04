@@ -1,0 +1,60 @@
+<div class="p-6">
+  <div class="mx-auto w-full max-w-[600px]">
+    <h1 class="mb-6 text-2xl font-extrabold uppercase text-primary">Add Employee</h1>
+    <form class="space-y-5 dark:text-white" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div>
+        <label for="Email">Email</label>
+        <div class="relative text-white-dark">
+          <input id="Email" formControlName="email" type="email" placeholder="Enter Email" class="form-input ps-10 placeholder:text-white-dark" />
+          <span class="absolute start-4 top-1/2 -translate-y-1/2">
+            <icon-mail [fill]="true" />
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label for="Password">Password</label>
+        <div class="relative text-white-dark">
+          <input id="Password" formControlName="password" type="password" placeholder="Enter Password" class="form-input ps-10 placeholder:text-white-dark" />
+          <span class="absolute start-4 top-1/2 -translate-y-1/2">
+            <icon-lock-dots [fill]="true" />
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label for="Name">Name</label>
+        <div class="relative text-white-dark">
+          <input id="Name" formControlName="name" type="text" placeholder="Enter Name" class="form-input ps-10 placeholder:text-white-dark" />
+          <span class="absolute start-4 top-1/2 -translate-y-1/2">
+            <icon-user class="h-5 w-5" />
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label for="Phone">Phone</label>
+        <div class="relative text-white-dark">
+          <input id="Phone" formControlName="phone" type="text" placeholder="Enter Phone" class="form-input ps-10 placeholder:text-white-dark" />
+          <span class="absolute start-4 top-1/2 -translate-y-1/2">
+            <icon-phone class="h-5 w-5" />
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label for="Role">Role</label>
+        <div class="relative text-white-dark">
+          <select id="Role" formControlName="role" class="form-select ps-4 placeholder:text-white-dark">
+            <option *ngFor="let r of roles" [ngValue]="r">{{ r }}</option>
+          </select>
+        </div>
+        <div class="mt-1 text-xs text-white-dark">Default is Manager as requested.</div>
+      </div>
+
+      <button type="submit" [disabled]="submitting || form.invalid" class="btn btn-gradient !mt-6 w-full border-0 uppercase shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]">
+        Add Employee
+      </button>
+    </form>
+  </div>
+</div>

@@ -1,8 +1,9 @@
-﻿import { Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import { slideDownUp } from '../shared/animations';
+import { environment } from 'src/environments/environment';
 
 @Component({
     selector: 'sidebar',
@@ -14,12 +15,20 @@ export class SidebarComponent {
     store: any;
     activeDropdown: string[] = [];
     parentDropdown: string = '';
+    // Default and environment logo handling
+    readonly defaultLogo = '/assets/images/logo.svg';
+    logoSrc: string = (environment.logo && environment.logo.trim()) ? environment.logo : this.defaultLogo;
     constructor(
         public translate: TranslateService,
         public storeData: Store<any>,
         public router: Router,
     ) {
         this.initStore();
+    }
+    onLogoError() {
+        if (this.logoSrc !== this.defaultLogo) {
+            this.logoSrc = this.defaultLogo;
+        }
     }
     async initStore() {
         this.storeData

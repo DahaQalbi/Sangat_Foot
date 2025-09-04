@@ -1,10 +1,10 @@
-﻿<div [ngClass]="{ 'dark text-white-dark': store.semidark }">
+<div [ngClass]="{ 'dark text-white-dark': store.semidark }">
     <nav class="sidebar fixed bottom-0 top-0 z-50 h-full min-h-screen w-[260px] shadow-[5px_0_25px_0_rgba(94,92,154,0.1)] transition-all duration-300">
         <div class="h-full bg-white dark:bg-[#0e1726]">
             <div class="flex items-center justify-between px-4 py-3">
                 <a routerLink="/" class="main-logo flex shrink-0 items-center">
-                    <img class="ml-[5px] w-8 flex-none" src="/assets/images/logo.svg" alt="" />
-                    <span class="align-middle text-2xl font-semibold dark:text-white-light lg:inline ltr:ml-1.5 rtl:mr-1.5">VRISTO</span>
+                    <img class="ml-[5px] w-[7rem] lg:w-[13rem] flex-none" [src]="logoSrc" (error)="onLogoError()" alt="Logo" />
+                    <span *ngIf="logoSrc === defaultLogo" class="align-middle text-2xl font-semibold dark:text-white-light lg:inline ltr:ml-1.5 rtl:mr-1.5">VRISTO</span>
                 </a>
                 <a
                     href="javascript:;"
@@ -49,6 +49,36 @@
                                 </li>
                                 <li>
                                     <a routerLink="/crypto" routerLinkActive="active" (click)="toggleMobileMenu()">{{ 'crypto' | translate }}</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+
+                    <li class="accordion menu nav-item">
+                        <button
+                            type="button"
+                            class="nav-link group w-full"
+                            [ngClass]="{ active: activeDropdown.includes('employees') }"
+                            (click)="toggleAccordion('employees')"
+                        >
+                            <div class="flex items-center">
+                                <icon-menu-contacts class="shrink-0 group-hover:!text-primary" />
+
+                                <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">
+                                    Employees
+                                </span>
+                            </div>
+                            <div [ngClass]="{ 'rtl:rotate-90 -rotate-90': !activeDropdown.includes('employees') }">
+                                <icon-caret-down />
+                            </div>
+                        </button>
+                        <div [@slideDownUp]="!activeDropdown.includes('employees')" class="accordion-content">
+                            <ul class="sub-menu text-gray-500">
+                                <li>
+                                    <a routerLink="/users/add-employee" routerLinkActive="active" (click)="toggleMobileMenu()">Add Employee</a>
+                                </li>
+                                <li>
+                                    <a routerLink="/users/all-manager" routerLinkActive="active" (click)="toggleMobileMenu()">All Manager</a>
                                 </li>
                             </ul>
                         </div>

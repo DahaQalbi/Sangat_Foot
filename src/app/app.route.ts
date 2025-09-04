@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AuthGuard } from './guards/auth.guard';
 
 // dashboard
 import { IndexComponent } from './index';
@@ -33,6 +34,7 @@ export const routes: Routes = [
     {
         path: '',
         component: AppLayout,
+        canActivate: [AuthGuard],
         children: [
             // dashboard
             { path: '', component: IndexComponent, data: { title: 'Sales Admin' } },

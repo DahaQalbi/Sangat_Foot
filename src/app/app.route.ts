@@ -73,6 +73,9 @@ export const routes: Routes = [
             // users
             { path: '', loadChildren: () => import('./users/user.module').then((d) => d.UsersModule) },
 
+            // products
+            { path: 'products', loadChildren: () => import('./products/product.module').then((d) => d.ProductModule) },
+
             // tables
             { path: 'tables', component: TablesComponent, data: { title: 'Tables' } },
             { path: '', loadChildren: () => import('./datatables/datatables.module').then((d) => d.DatatablesModule) },

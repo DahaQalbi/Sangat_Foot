@@ -8,9 +8,9 @@ import { AddManagePayload, ManagerItem } from 'src/app/interfaces/staff.interfac
   providedIn: 'root'
 })
 export class StaffService {
-  private readonly baseUrl = environment.apiUrl;
+  public baseUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(public http: HttpClient) {}
 
   // Payload for creating a manager/staff account
   addManage(payload: AddManagePayload): Observable<any> {

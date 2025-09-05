@@ -1,0 +1,62 @@
+<div class="panel">
+  <div class="mb-5 flex items-center justify-between">
+    <h5 class="text-lg font-semibold">Add Product</h5>
+    <a routerLink="/products/categories" class="btn btn-danger">Back to Categories</a>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6">
+    <!-- Category selector -->
+    <div>
+      <label class="mb-1 block font-medium">Category</label>
+      <select class="form-select w-full" formControlName="category_id">
+        <option [ngValue]="null" disabled>-- Select Category --</option>
+        <option *ngFor="let c of categories" [ngValue]="c.id || c._id || c.categoryId || c.value || c">{{ c.name || c.category || c.title || c }}</option>
+      </select>
+      <div class="mt-1 text-xs text-danger" *ngIf="form.get('category_id')?.touched && form.get('category_id')?.invalid">
+        Category is required.
+      </div>
+    </div>
+
+    <!-- Name input -->
+    <div>
+      <label class="mb-1 block font-medium">Name</label>
+      <input type="text" class="form-input w-full" placeholder="e.g. Margherita Pizza" formControlName="name" />
+      <div class="mt-1 text-xs text-danger" *ngIf="form.get('name')?.touched && form.get('name')?.invalid">
+        Name is required (min 2 characters).
+      </div>
+    </div>
+
+    <!-- Image input -->
+    <div>
+      <label class="mb-1 block font-medium">Image</label>
+      <input type="file" accept="image/*" class="form-input w-full" (change)="onFileChange($event)" />
+      <div class="mt-1 text-xs text-gray-500" *ngIf="form.get('image')?.value">Image selected.</div>
+      <div class="mt-1 text-xs text-danger" *ngIf="form.get('image')?.touched && form.get('image')?.invalid">
+        Image is required.
+      </div>
+    </div>
+
+    <!-- Size Type rows -->
+    <div formArrayName="sizeType">
+      <div class="mb-2 flex items-center justify-between">
+        <label class="font-medium">Sizes</label>
+        <button type="button" class="btn btn-primary" (click)="addSizeType()">Add Custom Input</button>
+      </div>
+
+      <div *ngFor="let ctrl of sizeType.controls; let i = index" class="mb-3">
+        <app-size-type-row [group]="$any(ctrl)" [index]="i" (remove)="removeSizeType(i)"></app-size-type-row>
+      </div>
+
+      <div class="mt-1 text-xs text-danger" *ngIf="sizeType.length === 0">
+        Add at least one size.
+      </div>
+    </div>
+
+    <div class="pt-2">
+      <button type="submit" class="btn btn-primary" [disabled]="submitting">
+        <span *ngIf="!submitting">Add Product</span>
+        <span *ngIf="submitting">Saving...</span>
+      </button>
+    </div>
+  </form>
+</div>

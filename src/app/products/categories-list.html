@@ -1,0 +1,33 @@
+<div class="panel">
+  <div class="mb-5 flex items-center justify-between">
+    <h5 class="text-lg font-semibold">Categories</h5>
+    <button class="btn btn-primary" (click)="goToAdd()">Add Category</button>
+  </div>
+
+  <div *ngIf="loading" class="text-gray-500">Loading...</div>
+  <div *ngIf="!loading && error" class="text-danger">{{ error }}</div>
+
+  <div *ngIf="!loading && !error">
+    <div *ngIf="!categories || categories.length === 0" class="text-gray-500">No categories found.</div>
+    <div *ngIf="categories && categories.length > 0" class="mt-2 overflow-x-auto">
+      <table class="min-w-full table-auto border-separate border-spacing-y-2">
+        <thead>
+          <tr class="text-left">
+            <th class="px-4 py-2">Category</th>
+            <th class="px-4 py-2 w-24">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of categories" class="bg-white dark:bg-[#0e1726]">
+            <td class="px-4 py-2">{{ c.category || c.name || c.title }}</td>
+            <td class="px-4 py-2">
+              <button class="btn btn-outline-danger !p-2" (click)="delete(c)" [disabled]="deletingId === (c.id || c._id || c.categoryId || c.name || c.category)">
+                <icon-trash class="h-4 w-4"></icon-trash>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -86,6 +86,35 @@
                             </ul>
                         </div>
                     </li>
+                    <li class="accordion menu nav-item">
+                        <button
+                            type="button"
+                            class="nav-link group w-full"
+                            [ngClass]="{ active: activeDropdown.includes('products') }"
+                            (click)="toggleAccordion('products')"
+                        >
+                            <div class="flex items-center">
+                                <icon-menu-components class="shrink-0 group-hover:!text-primary" />
+
+                                <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">
+                                    Product
+                                </span>
+                            </div>
+                            <div [ngClass]="{ 'rtl:rotate-90 -rotate-90': !activeDropdown.includes('products') }">
+                                <icon-caret-down />
+                            </div>
+                        </button>
+                        <div [@slideDownUp]="!activeDropdown.includes('products')" class="accordion-content">
+                            <ul class="sub-menu text-gray-500">
+                                <li>
+                                    <a routerLink="/products/categories" routerLinkActive="active" (click)="toggleMobileMenu()">Categories</a>
+                                </li>
+                                <li>
+                                    <a routerLink="/products/add-product" routerLinkActive="active" (click)="toggleMobileMenu()">Add Product</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
                     <ng-container *ngIf="isshow">
                     <h2 class="-mx-4 mb-1 flex items-center bg-white-light/30 px-7 py-3 font-extrabold uppercase dark:bg-dark dark:bg-opacity-[0.08]">
                         <icon-minus class="hidden h-5 w-4 flex-none" />

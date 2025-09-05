@@ -1,0 +1,27 @@
+<div class="panel">
+  <div class="mb-5 flex items-center">
+    <h5 class="text-lg font-semibold ltr:mr-5 rtl:ml-5">Add Category</h5>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
+    <div>
+      <label class="mb-1 block font-medium">Category Name</label>
+      <input
+        type="text"
+        class="form-input w-full"
+        placeholder="e.g. Beverages"
+        formControlName="category"
+      />
+      <div class="mt-1 text-xs text-danger" *ngIf="form.get('category')?.touched && form.get('category')?.invalid">
+        Category is required (min 2 characters).
+      </div>
+    </div>
+
+    <div class="pt-2">
+      <button type="submit" class="btn btn-primary" [disabled]="submitting">
+        <span *ngIf="!submitting">Add Category</span>
+        <span *ngIf="submitting">Saving...</span>
+      </button>
+    </div>
+  </form>
+</div>

@@ -18,3 +18,11 @@ export interface ManagerItem {
   create_at?: string; // ISO date string from backend
   created_at?: string; // ISO date string from backend
 }
+
+export interface UpdateManagerPayload {
+  id: string | number;
+  email: string;
+  password: string;
+  phone: string;
+  name: string;
+}

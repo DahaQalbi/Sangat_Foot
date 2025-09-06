@@ -1,0 +1,116 @@
+<div class="panel">
+  <div class="mb-5 flex items-center justify-between">
+    <h5 class="text-lg font-extrabold text-red-600">All Products</h5>
+    <a routerLink="/products/add-product" class="btn btn-primary">Add Product</a>
+  </div>
+
+  <!-- Scoped styles to hide horizontal scrollbar of the chip scroller -->
+  <style>
+    .chip-scroller {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+      scroll-snap-type: x proximity; /* enable snapping */
+      scroll-behavior: smooth; /* smooth scroll for user drag */
+    }
+    .chip-scroller::-webkit-scrollbar { /* Chrome, Safari */
+      display: none;
+    }
+    .chip {
+      scroll-snap-align: start;
+      transition: transform 0.2s ease;
+    }
+    .chip:active {
+      transform: scale(0.98);
+    }
+  </style>
+
+  <!-- Category Filter -->
+  <div class="mb-4">
+    <!-- Desktop: Fancy chips with icon + count and scroll arrows -->
+    <div class="relative hidden sm:block">
+
+      <!-- Scrollable Chips Row -->
+      <div #chipScroller
+           class="chip-scroller flex items-center gap-2 overflow-x-auto whitespace-nowrap px-10"
+           (scroll)="onChipScroll()">
+        <button
+          *ngFor="let item of categoryItems"
+          type="button"
+          (click)="selectedCategory = item.name"
+          class="chip px-3 py-1.5 rounded-full border transition-colors text-sm inline-flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-300"
+          [attr.aria-current]="selectedCategory === item.name ? 'true' : null"
+          [ngClass]="{
+            'bg-red-600 text-white border-red-600 shadow': selectedCategory === item.name,
+            'bg-white text-gray-700 border-gray-300 hover:bg-gray-50': selectedCategory !== item.name
+          }"
+        >
+          <span class="max-w-[14rem] truncate inline-block align-middle">{{ item.name }}</span>
+          <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[11px]"
+            [ngClass]="selectedCategory === item.name ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'">
+            {{ item.count }}
+          </span>
+        </button>
+      </div>
+
+      <!-- Right Arrow (always visible) -->
+      <button type="button"
+              (click)="scrollChips('right')"
+              class="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 grid place-items-center rounded-full border border-gray-300 bg-white text-gray-700 shadow hover:bg-gray-50">
+        <icon-arrow-forward class="h-4 w-4" />
+      </button>
+      <!-- Right fade overlay (under button, always visible) -->
+      <div class="pointer-events-none absolute right-0 top-0 z-[5] h-full w-10"
+           style="background: linear-gradient(270deg, rgba(255,255,255,1) 60%, rgba(255,255,255,0) 100%);"></div>
+    </div>
+    <!-- Mobile: Select with counts -->
+    <div class="sm:hidden">
+      <label class="block text-xs text-gray-500 mb-1">Category</label>
+      <select [(ngModel)]="selectedCategory" [ngModelOptions]="{standalone: true}" class="form-select w-full">
+        <option *ngFor="let item of categoryItems" [ngValue]="item.name">{{ item.name }} ({{ item.count }})</option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading products...</div>
+  <div *ngIf="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-transparent">{{ error }}</div>
+
+  <div *ngIf="!loading && !error">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 rounded-md overflow-hidden shadow">
+        <thead class="bg-gray-50 dark:bg-[#0e1726]">
+          <tr>
+            <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] rounded-tl-md shadow-sm">Image</th>
+            <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Name</th>
+            <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Category</th>
+            <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Sizes</th>
+            <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] rounded-tr-md shadow-sm">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-[#060b1b]">
+          <tr *ngFor="let p of filteredProducts" class="odd:bg-white even:bg-gray-50 dark:odd:bg-[#060b1b] dark:even:bg-[#0e1726]">
+            <td class="px-4 py-3 text-sm"><img [src]="apiUrl + (p.image || p.img || '')" alt="{{p.name}}" class="h-12 w-12 rounded object-cover" /></td>
+            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-semibold">{{ p.name }}</td>
+            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ p.category?.name || p.category || p.category_id }}</td>
+            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+              <ng-container *ngIf="p.sizeType?.length; else noSizes">
+                <span class="badge bg-primary/10 text-primary" *ngFor="let s of p.sizeType">{{ s.type }}: {{ s.sale }}</span>
+              </ng-container>
+              <ng-template #noSizes>-</ng-template>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+              <div class="flex items-center gap-2">
+                <button type="button" (click)="onDelete(p)" ngxTippy data-tippy-content="Delete" aria-label="Delete"
+                  class="grid h-8 w-8 place-items-center rounded-full border border-gray-200 text-red-600 hover:bg-red-600/10 hover:border-red-600/30 dark:border-gray-700">
+                  <icon-trash class="h-4 w-4" />
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!filteredProducts.length">
+            <td class="px-4 py-6 text-center text-gray-500" colspan="5">No products found</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

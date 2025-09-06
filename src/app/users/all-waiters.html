@@ -2,7 +2,7 @@
   <div class="mx-auto w-full max-w-[900px]">
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-2xl font-extrabold uppercase text-primary">All Waiters</h1>
-      <a routerLink="/users/add-employee" class="btn btn-primary">Add Waiter</a>
+      <a routerLink="/users/add-manager" class="btn btn-primary">Add Waiter</a>
     </div>
 
     <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading waiters...</div>
@@ -16,7 +16,9 @@
               <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] rounded-tl-md shadow-sm">Name</th>
               <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Email</th>
               <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Phone</th>
-              <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] rounded-tr-md shadow-sm">Employment Date</th>
+              <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Password</th>
+              <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] shadow-sm">Employment Date</th>
+              <th class="px-4 py-3 text-left text-sm font-extrabold uppercase tracking-widest bg-gradient-to-r from-red-600 to-red-700 text-[#faac1b] rounded-tr-md shadow-sm">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-[#060b1b]">
@@ -24,10 +26,30 @@
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-semibold">{{ w.name }}</td>
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ w.email }}</td>
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ w.phone || '-' }}</td>
-              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300"><span class="badge bg-primary/10 text-primary">{{ w.create_at | date:'longDate' }}</span></td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                <div class="flex items-center gap-2">
+                  <span>{{ isPasswordVisible(w) ? (w.password || '-') : masked(w.password) }}</span>
+                  <button type="button" class="rounded p-1 hover:bg-gray-100 dark:hover:bg-[#0e1726]" (click)="togglePassword(w)" ngxTippy [attr.data-tippy-content]="isPasswordVisible(w) ? 'Hide' : 'Show'" aria-label="Toggle password visibility">
+                    <icon-eye class="h-4 w-4 text-primary" />
+                  </button>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300"><span class="badge bg-primary/10 text-primary">{{ w.created_at | date:'longDate' }}</span></td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                <div class="flex items-center gap-2">
+                  <button type="button" (click)="onEdit(w)" ngxTippy data-tippy-content="Update" aria-label="Update"
+                    class="grid h-8 w-8 place-items-center rounded-full border border-gray-200 text-primary hover:bg-primary/10 hover:border-primary/30 dark:border-gray-700">
+                    <icon-edit class="h-4 w-4" />
+                  </button>
+                  <button type="button" (click)="onDelete(w)" ngxTippy data-tippy-content="Delete" aria-label="Delete"
+                    class="grid h-8 w-8 place-items-center rounded-full border border-gray-200 text-red-600 hover:bg-red-600/10 hover:border-red-600/30 dark:border-gray-700">
+                    <icon-trash class="h-4 w-4" />
+                  </button>
+                </div>
+              </td>
             </tr>
             <tr *ngIf="!waiters.length">
-              <td class="px-4 py-6 text-center text-gray-500" colspan="4">No waiters found</td>
+              <td class="px-4 py-6 text-center text-gray-500" colspan="6">No waiters found</td>
             </tr>
           </tbody>
         </table>

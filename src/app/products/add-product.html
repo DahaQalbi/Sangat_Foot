@@ -1,7 +1,23 @@
 <div class="panel">
   <div class="mb-5 flex items-center justify-between">
-    <h5 class="text-lg font-semibold">Add Product</h5>
+    <h5 class="text-lg font-extrabold text-red-600">Add Product</h5>
     <a routerLink="/products/categories" class="btn btn-danger">Back to Categories</a>
+  </div>
+
+  <div class="mb-4 border-b border-gray-200 dark:border-gray-700">
+    <nav class="-mb-px flex items-center gap-6">
+      <a routerLink="/products/add-product"
+         routerLinkActive="text-[#faac1b] border-red-600"
+         [routerLinkActiveOptions]="{ exact: true }"
+         class="px-1 pb-2 text-sm font-extrabold uppercase tracking-wide border-b-2 border-transparent text-gray-600 dark:text-gray-300">
+        Add Product
+      </a>
+      <a routerLink="/products/all-products"
+         routerLinkActive="text-[#faac1b] border-red-600"
+         class="px-1 pb-2 text-sm font-extrabold uppercase tracking-wide border-b-2 border-transparent text-gray-600 dark:text-gray-300">
+        All Products
+      </a>
+    </nav>
   </div>
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6">
@@ -26,11 +42,22 @@
       </div>
     </div>
 
-    <!-- Image input -->
+    <!-- Image input + preview -->
     <div>
       <label class="mb-1 block font-medium">Image</label>
-      <input type="file" accept="image/*" class="form-input w-full" (change)="onFileChange($event)" />
-      <div class="mt-1 text-xs text-gray-500" *ngIf="form.get('image')?.value">Image selected.</div>
+      <input #imageInput type="file" accept="image/*" class="form-input w-full" (change)="onFileChange($event)" />
+      <div class="mt-3" *ngIf="form.get('image')?.value as img">
+        <div class="relative inline-block overflow-hidden rounded-xl border border-gray-200 shadow-md dark:border-gray-700">
+          <img [src]="img" alt="Preview" class="block h-40 w-40 object-cover" />
+          <button type="button" aria-label="Remove image" class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-red-600 text-[#faac1b] shadow hover:bg-red-700" (click)="clearImage()">
+            <!-- close icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </div>
       <div class="mt-1 text-xs text-danger" *ngIf="form.get('image')?.touched && form.get('image')?.invalid">
         Image is required.
       </div>

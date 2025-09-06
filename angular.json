@@ -25,7 +25,8 @@
                         "assets": ["src/assets", "src/demo-prepare.html"],
                         "styles": [
                             "src/assets/css/app.css",
-                            "node_modules/sweetalert2/dist/sweetalert2.min.css"
+                            "node_modules/sweetalert2/dist/sweetalert2.min.css",
+                            "src/assets/css/sweetalert.css"
                         ],
                         "scripts": ["node_modules/apexcharts/dist/apexcharts.min.js"],
                         "allowedCommonJsDependencies": ["apexcharts", "sweetalert2", "file-saver", "quill", "quill-delta"]

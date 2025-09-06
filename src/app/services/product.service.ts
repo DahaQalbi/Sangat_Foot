@@ -16,8 +16,13 @@ export class ProductService extends StaffService {
   getAllCategories(): Observable<any> {
     return this.http.get<any>(this.baseUrl + 'getAllCategories');
   }
+  getAllProducts(): Observable<any> {
+    return this.http.get<any>(this.baseUrl + 'getAllProducts');
+  }
   deleteCategory(idOrName: string | number): Observable<any> {
-    // Assuming backend accepts DELETE /deleteCategory/{id}
     return this.http.delete<any>(this.baseUrl + 'deleteCategory/' + idOrName);
+  }
+  deleteProduct(id: number): Observable<any> {
+    return this.http.delete<any>(this.baseUrl + 'deleteProduct/' + id);
   }
 }

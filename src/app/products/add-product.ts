@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ProductService } from 'src/app/services/product.service';
 import { ToastService } from 'src/app/services/toast.service';
@@ -12,6 +12,7 @@ export class AddProductComponent implements OnInit {
   submitting = false;
   loadingCategories = true;
   categories: any[] = [];
+  @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
 
   constructor(
     private fb: FormBuilder,
@@ -75,6 +76,14 @@ export class AddProductComponent implements OnInit {
 
     const base64 = await this.toBase64(file);
     this.form.patchValue({ image: base64 });
+  }
+
+  clearImage() {
+    this.form.patchValue({ image: '' });
+    this.form.get('image')?.markAsPristine();
+    if (this.imageInputRef && this.imageInputRef.nativeElement) {
+      this.imageInputRef.nativeElement.value = '';
+    }
   }
 
   private toBase64(file: File): Promise<string> {

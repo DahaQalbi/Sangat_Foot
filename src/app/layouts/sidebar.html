@@ -75,9 +75,6 @@
                         <div [@slideDownUp]="!activeDropdown.includes('employees')" class="accordion-content">
                             <ul class="sub-menu text-gray-500">
                                 <li>
-                                    <a routerLink="/users/add-employee" routerLinkActive="active" (click)="toggleMobileMenu()">Add Employee</a>
-                                </li>
-                                <li>
                                     <a routerLink="/users/all-manager" routerLinkActive="active" (click)="toggleMobileMenu()">All Manager</a>
                                 </li>
                                 <li>
@@ -111,6 +108,9 @@
                                 </li>
                                 <li>
                                     <a routerLink="/products/add-product" routerLinkActive="active" (click)="toggleMobileMenu()">Add Product</a>
+                                </li>
+                                <li>
+                                    <a routerLink="/products/all-products" routerLinkActive="active" (click)="toggleMobileMenu()">All Products</a>
                                 </li>
                             </ul>
                         </div>

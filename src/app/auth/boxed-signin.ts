@@ -82,7 +82,15 @@ export class BoxedSigninComponent {
                     return;
                 }
                 try {
+                    // Persist raw response
                     await this.storage.set('auth', res);
+                    localStorage.setItem('auth', JSON.stringify(res));
+                    // Verify by reading back from IndexedDB and logging
+                    try {
+                        const authBack = await this.storage.get('auth');
+                        // eslint-disable-next-line no-console
+                        console.log('IndexedDB auth (read-back):', authBack);
+                    } catch {}
                 } catch (e) {
                     // optional: surface storage error
                     console.error('Failed to persist auth data to IndexedDB', e);

@@ -1,0 +1,115 @@
+<div class="panel">
+  <div class="mb-5 flex items-center justify-between gap-3">
+    <h5 class="text-lg font-extrabold text-red-600">Add Order</h5>
+    <form [formGroup]="form" class="flex items-center gap-2">
+
+      <input type="text" class="form-input hidden" formControlName="notes" placeholder="Notes" />
+    </form>
+  </div>
+
+  <!-- Search bar + Reset -->
+  <div class="mb-3 flex items-center gap-2">
+    <div class="relative w-full">
+      <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/></svg>
+      </span>
+      <input [(ngModel)]="search" [ngModelOptions]="{standalone:true}" type="text" class="form-input w-full pl-9" placeholder="Search your menu item here" />
+    </div>
+    <button type="button" class="btn btn-primary" (click)="search=''; selectedCategory='All'">Reset</button>
+  </div>
+
+  <!-- Category chips -->
+  <div class="mb-4 flex flex-wrap items-center gap-2">
+    <button type="button" *ngFor="let c of categories"
+            (click)="selectedCategory=c"
+            class="px-3 py-1.5 rounded-full border transition-colors text-sm"
+            [ngClass]="selectedCategory===c ? 'bg-red-600 text-white border-red-600 shadow' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'">
+      <span>{{ c }}</span>
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading products...</div>
+  <div *ngIf="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-transparent">{{ error }}</div>
+
+  <!-- Product grid -->
+  <div *ngIf="!loading && !error">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div *ngFor="let p of filteredProducts" class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-[#0e1726]">
+        <div class="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+          <img [src]="imgUrl + p.image" alt="{{p.name}}" class="h-full w-full object-cover" />
+          <button type="button" (click)="toggleSelect(p)"
+                  class="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full border text-white shadow"
+                  [ngClass]="isSelected(p) ? 'bg-red-600 border-red-600' : 'bg-gray-700/70 border-white/30'">
+            <svg *ngIf="isSelected(p)" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            <svg *ngIf="!isSelected(p)" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+          </button>
+        </div>
+        <div class="p-3">
+          <div class="truncate font-semibold text-gray-800 dark:text-gray-100">{{ p.name }}</div>
+          <div class="mt-1 text-primary font-bold">${{ priceOf(p) | number:'1.0-2' }}</div>
+          <div class="mt-2 flex items-center gap-2" *ngIf="isSelected(p)">
+            <button type="button" class="grid h-7 w-7 place-items-center rounded border" (click)="dec(p)">-</button>
+            <span class="min-w-[1.5rem] text-center">{{ selected.get(p?.productId ?? p?.id)?.qty }}</span>
+            <button type="button" class="grid h-7 w-7 place-items-center rounded border" (click)="inc(p)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating cart -->
+  <div class="fixed bottom-6 right-6 z-40 w-[320px] max-w-[90vw] rounded-lg border border-gray-200 bg-white p-4 shadow-xl dark:border-gray-700 dark:bg-[#0e1726]">
+    <div class="mb-2 flex items-center justify-between">
+      <div class="font-extrabold">Cart</div>
+      <div class="text-xs text-gray-500">{{ totalItems }} items</div>
+    </div>
+    <div class="max-h-[200px] space-y-2 overflow-auto">
+      <div *ngFor="let row of selected | keyvalue" class="flex items-center justify-between gap-2">
+        <div class="truncate text-sm">{{ row.value.product?.name }}</div>
+        <div class="flex items-center gap-2">
+          <button type="button" class="grid h-6 w-6 place-items-center rounded border" (click)="dec(row.value.product)">-</button>
+          <span class="text-sm">{{ row.value.qty }}</span>
+          <button type="button" class="grid h-6 w-6 place-items-center rounded border" (click)="inc(row.value.product)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="mt-3 flex items-center justify-between">
+      <div class="font-bold">Total: ${{ totalPrice | number:'1.0-2' }}</div>
+      <button type="button" class="btn btn-primary" [disabled]="submitting || !selected.size" (click)="createOrder()">Create Order</button>
+    </div>
+  </div>
+
+  <!-- Size Selection Modal -->
+  <div *ngIf="sizeModalOpen" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl dark:bg-[#0e1726]">
+      <div class="mb-3 flex items-center justify-between">
+        <div class="font-extrabold text-gray-800 dark:text-gray-100">Select Size</div>
+        <button type="button" class="text-gray-500 hover:text-gray-800" (click)="closeSizeModal()">✕</button>
+      </div>
+      <div class="mb-3 text-sm text-gray-500">{{ activeProduct?.name }}</div>
+
+      <div class="mb-2 flex flex-wrap gap-2">
+        <button *ngFor="let s of sizeChips" type="button"
+                class="rounded-full border border-gray-200 bg-red-50 px-3 py-1 font-semibold text-red-700 hover:bg-red-100 dark:border-gray-700 dark:bg-red-900/20 dark:text-red-300"
+                (click)="selectChipForRow(s)">
+          {{ s.type || 'Default' }} - ${{ s.sale | number:'1.0-2' }}
+        </button>
+      </div>
+
+      <!-- Manual entry rows (click a row to target chip fill) -->
+      <div [formGroup]="sizeForm" class="space-y-2">
+        <div formArrayName="sizes" class="space-y-3">
+          <div *ngFor="let ctrl of sizesFA.controls; let i = index" (click)="chipTargetIndex=i" class="rounded-md border p-3 hover:border-primary cursor-pointer" [class.border-primary]="chipTargetIndex===i">
+            <app-size-type-row [group]="$any(ctrl)" [index]="i" (remove)="removeSizeRow(i)"></app-size-type-row>
+          </div>
+        </div>
+        <!-- Single default row only; Add More hidden as requested -->
+      </div>
+
+      <div class="mt-4 flex items-center justify-end gap-2">
+        <button type="button" class="btn btn-outline-primary" (click)="closeSizeModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="confirmAddFromModal()">Add to Cart</button>
+      </div>
+    </div>
+  </div>
+</div>

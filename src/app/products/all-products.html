@@ -1,7 +1,10 @@
 <div class="panel">
   <div class="mb-5 flex items-center justify-between">
     <h5 class="text-lg font-extrabold text-red-600">All Products</h5>
-    <a routerLink="/products/add-product" class="btn btn-primary">Add Product</a>
+    <div class="flex items-center gap-2">
+      <a routerLink="/products/add-deal" class="btn btn-outline-primary">Add Deal</a>
+      <a routerLink="/products/add-product" class="btn btn-primary">Add Product</a>
+    </div>
   </div>
 
   <!-- Scoped styles to hide horizontal scrollbar of the chip scroller -->
@@ -88,7 +91,7 @@
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-[#060b1b]">
           <tr *ngFor="let p of filteredProducts" class="odd:bg-white even:bg-gray-50 dark:odd:bg-[#060b1b] dark:even:bg-[#0e1726]">
-            <td class="px-4 py-3 text-sm"><img [src]="apiUrl + (p.image || p.img || '')" alt="{{p.name}}" class="h-12 w-12 rounded object-cover" /></td>
+            <td class="px-4 py-3 text-sm"><img [src]="imgUrl + p.image" alt="{{p.name}}" class="h-12 w-12 rounded object-cover" /></td>
             <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-semibold">{{ p.name }}</td>
             <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ p.category?.name || p.category || p.category_id }}</td>
             <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">

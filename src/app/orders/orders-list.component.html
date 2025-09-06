@@ -1,0 +1,54 @@
+<div class="panel">
+  <!-- Header -->
+  <div class="mb-4 flex items-center justify-between">
+    <h5 class="text-lg font-extrabold text-red-600">Orders ({{ orders.length }})</h5>
+    <a routerLink="/orders/add" class="btn btn-primary">New Order</a>
+  </div>
+
+  <!-- States -->
+  <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading orders...</div>
+  <div *ngIf="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-transparent">{{ error }}</div>
+
+  <!-- Grid of cards -->
+  <div *ngIf="!loading && !error">
+    <div class="text-gray-500" *ngIf="!orders.length">No orders yet.</div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" *ngIf="orders.length">
+      <div *ngFor="let o of orders" class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-[#0e1726]">
+        <div class="mb-2 flex items-start justify-between">
+          <div class="flex items-center gap-2">
+            <span class="rounded-full bg-purple-100 px-2 py-1 text-xs font-bold text-purple-700">{{ o.tableNo }}</span>
+            <div>
+              <div class="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">{{ o.customer }}</div>
+              <div class="text-xs text-gray-500">Order #{{ o.id }}</div>
+            </div>
+          </div>
+          <ng-container *ngIf="editingStatusId !== o.id; else editStatusTpl">
+            <button type="button" class="rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700 hover:brightness-95" *ngIf="o.status" (click)="startEditStatus(o.id)">
+              {{ o.status }}
+            </button>
+          </ng-container>
+          <ng-template #editStatusTpl>
+            <div class="flex items-center gap-1">
+              <select class="form-select h-7 !py-0 text-[10px]" [ngModel]="o.status" (ngModelChange)="applyStatus(o, $event)">
+                <option *ngFor="let st of statusOptions" [ngValue]="st">{{ st }}</option>
+              </select>
+              <button class="text-xs text-gray-500 hover:text-gray-800" (click)="cancelEditStatus()">✕</button>
+            </div>
+          </ng-template>
+        </div>
+        <div class="mb-3 flex items-center justify-between text-xs text-gray-500">
+          <div>Order Date: {{ o.created | date:'MMM dd, yyyy hh:mm a' }}</div>
+          <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-yellow-400"></span> Order Placed</div>
+        </div>
+        <div class="mb-4 text-xs text-gray-600">{{ o.itemsCount }} Item(s)</div>
+        <div class="flex items-center justify-between">
+          <div class="text-xl font-extrabold">${{ o.total | number:'1.0-2' }}</div>
+          <div class="flex items-center gap-2 text-xs text-gray-500">
+            <span class="i-heroicons-user-circle"></span>
+            <span>{{ o.waiter || '—' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -76,6 +76,9 @@ export const routes: Routes = [
             // products
             { path: 'products', loadChildren: () => import('./products/product.module').then((d) => d.ProductModule) },
 
+            // orders
+            { path: 'orders', loadChildren: () => import('./orders/order.module').then((m) => m.OrderModule) },
+
             // tables
             { path: 'tables', component: TablesComponent, data: { title: 'Tables' } },
             { path: '', loadChildren: () => import('./datatables/datatables.module').then((d) => d.DatatablesModule) },

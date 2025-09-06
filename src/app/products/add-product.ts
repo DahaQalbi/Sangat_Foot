@@ -75,7 +75,7 @@ export class AddProductComponent implements OnInit {
     if (!file) return;
 
     const base64 = await this.toBase64(file);
-    this.form.patchValue({ image: base64 });
+    this.form.patchValue({ image: this.stripDataUrlHeader(base64) });
   }
 
   clearImage() {
@@ -95,13 +95,22 @@ export class AddProductComponent implements OnInit {
     });
   }
 
+  private stripDataUrlHeader(dataUrl: string): string {
+    if (!dataUrl) return dataUrl;
+    // If it's already raw base64 (no comma), return as-is
+    const idx = dataUrl.indexOf(',');
+    return idx >= 0 ? dataUrl.substring(idx + 1) : dataUrl;
+  }
+
   onSubmit() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const payload = this.form.value;
+    const payload = { ...this.form.value };
+    // Ensure image is pure base64 without header
+    payload.image = this.stripDataUrlHeader(payload.image);
     this.submitting = true;
     this.productService.addProduct(payload).subscribe({
       next: () => {

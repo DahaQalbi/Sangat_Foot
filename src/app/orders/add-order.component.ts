@@ -1,0 +1,348 @@
+import { Component } from '@angular/core';
+import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { toggleAnimation } from 'src/app/shared/animations';
+import { IdbService } from 'src/app/services/idb.service';
+import { Router } from '@angular/router';
+import { ToastService } from 'src/app/services/toast.service';
+import { ProductService } from 'src/app/services/product.service';
+import { environment } from 'src/environments/environment';
+
+@Component({
+  selector: 'app-add-order',
+  templateUrl: './add-order.component.html',
+  animations: [toggleAnimation],
+})
+export class AddOrderComponent {
+  form!: FormGroup;
+  submitting = false;
+  loading = false;
+  error: string | null = null;
+
+  products: any[] = [];
+  search = '';
+  categories: string[] = [];
+  selectedCategory = 'All';
+  categoryCounts: Record<string, number> = {};
+  imgUrl: string = environment.imgUrl;
+
+  // selected items: key by productId or id
+  selected: Map<string | number, { product: any; qty: number }> = new Map();
+
+  // Modal state for size selection
+  sizeModalOpen = false;
+  activeProduct: any = null;
+  sizeForm!: FormGroup;
+  sizeChips: Array<{ type: string; cost: number; sale: number }> = [];
+  chipTargetIndex = 0;
+  chipSelections: Map<string, { sale: number; qty: number }> = new Map();
+  // custom manual entry
+  customType = '';
+  customCost: number | null = null;
+  customSale: number | null = null;
+
+  constructor(
+    private fb: FormBuilder,
+    private idb: IdbService,
+    private router: Router,
+    private toast: ToastService,
+    private productService: ProductService,
+  ) {
+    this.form = this.fb.group({
+      customerName: [''],
+      phone: [''],
+      notes: [''],
+    });
+    // form for size modal
+    this.sizeForm = this.fb.group({
+      sizes: this.fb.array([] as FormGroup[]),
+    });
+    this.initLoad();
+  }
+
+  // Load products from cache, then API in background
+  private async initLoad() {
+    await this.loadFromCache();
+    this.fetchProducts();
+  }
+
+  private async loadFromCache() {
+    try {
+      const cached = await this.idb.getAll<any>('products');
+      if (Array.isArray(cached) && cached.length) {
+        this.products = cached;
+        this.computeCategories();
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private fetchProducts() {
+    if (!this.products.length) this.loading = true;
+    this.productService.getAllProducts().subscribe({
+      next: async (res) => {
+        const data = Array.isArray(res) ? res : (res?.data || res?.products || []);
+        this.products = data || [];
+        this.computeCategories();
+        try {
+          await this.idb.replaceAll('products', this.normalizedProductsForCache());
+        } catch {}
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.error = 'Failed to load products';
+      },
+    });
+  }
+
+  private normalizedProductsForCache(): any[] {
+    return (this.products || []).map((p: any, idx: number) => {
+      let productId = p?.productId ?? p?.id;
+      if (productId === undefined || productId === null || productId === '') productId = `p_${Date.now()}_${idx}`;
+      return { ...p, productId };
+    });
+  }
+
+  private computeCategories(): void {
+    const counts: Record<string, number> = {};
+    for (const p of this.products || []) {
+      const c = (p?.category?.name || p?.category || '').toString().trim() || 'Uncategorized';
+      counts[c] = (counts[c] || 0) + 1;
+    }
+    const unique = Object.keys(counts).sort((a, b) => a.localeCompare(b));
+    this.categoryCounts = { All: (this.products || []).length, ...counts };
+    this.categories = ['All', ...unique];
+    if (!this.categories.includes(this.selectedCategory)) this.selectedCategory = 'All';
+  }
+
+  get filteredProducts(): any[] {
+    const term = (this.search || '').toLowerCase().trim();
+    let list = this.products || [];
+    if (this.selectedCategory && this.selectedCategory !== 'All') {
+      const sel = this.selectedCategory.toLowerCase();
+      list = list.filter((p) => ((p?.category?.name || p?.category || '').toString().toLowerCase() === sel));
+    }
+    if (term) {
+      list = list.filter((p) => (p?.name || '').toString().toLowerCase().includes(term));
+    }
+    return list;
+  }
+
+  categoryCount(c: string): number { return this.categoryCounts[c] ?? 0; }
+
+  isSelected(p: any): boolean {
+    const base = p?.productId ?? p?.id;
+    // If the product has a size attached, check that exact entry
+    if (p?.selectedSize) {
+      const key = `${base}_${p.selectedSize.type || 'Default'}`;
+      return this.selected.has(key);
+    }
+    // Otherwise, check if any size of this product exists in cart
+    for (const k of this.selected.keys()) {
+      if (String(k).startsWith(String(base) + '_') || String(k) === String(base)) return true;
+    }
+    return false;
+  }
+
+  toggleSelect(p: any): void {
+    // Open size selection modal instead of immediate toggle
+    this.openSizeModal(p);
+  }
+
+  inc(p: any): void {
+    const base = p?.productId ?? p?.id;
+    const key = p?.selectedSize ? `${base}_${p.selectedSize.type || 'Default'}` : String(base);
+    const row = this.selected.get(key);
+    if (row) row.qty += 1;
+  }
+
+  dec(p: any): void {
+    const base = p?.productId ?? p?.id;
+    const key = p?.selectedSize ? `${base}_${p.selectedSize.type || 'Default'}` : String(base);
+    const row = this.selected.get(key);
+    if (!row) return;
+    row.qty -= 1;
+    if (row.qty <= 0) this.selected.delete(key);
+  }
+
+  get totalItems(): number {
+    let t = 0; this.selected.forEach((v) => t += v.qty); return t;
+  }
+
+  priceOf(p: any): number {
+    // Try common fields: price, sale price on sizeType, etc.
+    if (p?.selectedSize) {
+      const val = p.selectedSize?.sale ?? p.selectedSize?.price ?? 0;
+      const num = Number(val);
+      return isNaN(num) ? 0 : num;
+    }
+    if (typeof p?.price === 'number') return p.price;
+    const first = Array.isArray(p?.sizeType) ? p.sizeType[0] : null;
+    const val = first?.sale ?? first?.price ?? 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }
+
+  get totalPrice(): number {
+    let t = 0;
+    this.selected.forEach(({ product, qty }) => { t += this.priceOf(product) * qty; });
+    return t;
+  }
+
+  async createOrder() {
+    if (!this.selected.size) { this.toast.error('Please select at least one item'); return; }
+    this.submitting = true;
+    try {
+      const v = this.form.value;
+      const items = Array.from(this.selected.values()).map(({ product, qty }) => ({
+        productId: product?.productId ?? product?.id,
+        name: product?.name,
+        price: this.priceOf(product),
+        qty,
+        product, // include full product data (including selectedSize)
+      }));
+      const draftId = Date.now();
+      const order = {
+        id: draftId,
+        customerName: v.customerName,
+        phone: v.phone,
+        notes: v.notes,
+        items,
+        total: this.totalPrice,
+        created_at: new Date().toISOString(),
+        status: 'draft',
+      };
+      await this.idb.putAll('orders', [order]);
+
+      // Build flattened summary for next page state
+      const summaryItems = items.map((it) => {
+        const p = it.product || {};
+        const sel = p.selectedSize || {};
+        const first = Array.isArray(p.sizeType) && p.sizeType.length ? p.sizeType[0] : {};
+        const selectedSize = {
+          type: sel.type ?? first.type ?? 'Default',
+          sale: Number(sel.sale ?? first.sale ?? p.price ?? it.price ?? 0) || 0,
+          cost: Number(sel.cost ?? first.cost ?? 0) || 0,
+        };
+        const category = (p.category && (p.category.name || p.category)) || p.category_id || '';
+        return {
+          qty: it.qty,
+          productId: it.productId,
+          name: it.name,
+          category,
+          selectedSize,
+        };
+      });
+      const totalsale = summaryItems.reduce((a, r) => a + (r.selectedSize.sale * r.qty), 0);
+      const totalcost = summaryItems.reduce((a, r) => a + (r.selectedSize.cost * r.qty), 0);
+
+      // Go to table info step with both the raw draft and flattened summary via navigation state
+      this.router.navigate(['/orders/table'], {
+        queryParams: { id: draftId },
+        state: {
+          orderDraft: order,
+          summary: { items: summaryItems, totalsale, totalcost },
+        },
+      });
+    } catch {
+      this.toast.error('Failed to create order');
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  // ------- Size Modal Logic -------
+  get sizesFA(): FormArray<FormGroup> {
+    return this.sizeForm.get('sizes') as FormArray<FormGroup>;
+  }
+
+  private buildSizeGroup(init: any): FormGroup {
+    return this.fb.group({
+      type: [init?.type || ''],
+      cost: [init?.cost ?? 0],
+      sale: [init?.sale ?? init?.price ?? 0],
+    });
+  }
+
+  openSizeModal(p: any) {
+    this.activeProduct = p;
+    // reset form array
+    while (this.sizesFA.length) this.sizesFA.removeAt(0);
+    const src = Array.isArray(p?.sizeType) && p.sizeType.length ? p.sizeType : [];
+    this.sizeChips = src.map((s: any) => ({ type: s?.type || '', cost: Number(s?.cost ?? 0) || 0, sale: Number(s?.sale ?? s?.price ?? 0) || 0 }));
+    // Initialize chip selections (qty=0 for each size). If no sizes, create a default one.
+    this.chipSelections.clear();
+    if (this.sizeChips.length) {
+      for (const c of this.sizeChips) this.chipSelections.set(c.type || 'Default', { sale: c.sale, qty: 0 });
+    } else {
+      const defSale = Number(p?.price ?? 0) || 0;
+      this.sizeChips = [{ type: 'Default', cost: 0, sale: defSale }];
+      this.chipSelections.set('Default', { sale: defSale, qty: 0 });
+    }
+    this.chipTargetIndex = 0;
+    this.customType = '';
+    this.customCost = null;
+    this.customSale = null;
+    // Default: show one manual input row
+    this.sizesFA.push(this.buildSizeGroup({ type: '', cost: 0, sale: 0 }));
+    this.sizeModalOpen = true;
+  }
+
+  closeSizeModal() { this.sizeModalOpen = false; this.activeProduct = null; }
+
+  addSizeRow() { this.sizesFA.push(this.buildSizeGroup({ type: '', cost: 0, sale: 0 })); }
+  removeSizeRow(i: number) { this.sizesFA.removeAt(i); }
+  incSizeQty(i: number) {}
+  decSizeQty(i: number) {}
+
+  confirmAddFromModal() {
+    const keyBase = this.activeProduct?.productId ?? this.activeProduct?.id;
+    const rows = (this.sizesFA.value as any[]).filter((r) => (r?.type || '').toString().trim() && Number(r?.sale) > 0);
+    if (!rows.length) { this.toast.error('Please add at least one size with price'); return; }
+    for (const r of rows) {
+      const type = (r.type || 'Custom').toString();
+      const sale = Number(r.sale) || 0;
+      const cost = Number(r.cost);
+      const key = `${keyBase}_${type}`;
+      const entry = { ...this.activeProduct, selectedSize: { type, sale, cost: isNaN(cost) ? undefined : cost } };
+      if (this.selected.has(key)) {
+        const prev = this.selected.get(key)!;
+        prev.qty += 1;
+        this.selected.set(key, prev);
+      } else {
+        this.selected.set(key, { product: entry, qty: 1 });
+      }
+    }
+    this.closeSizeModal();
+  }
+
+  selectChipForRow(chip: { type: string; cost: number; sale: number }) {
+    // Patch selected chip into the currently active row for manual review/edits
+    const i = this.chipTargetIndex || 0;
+    const g = this.sizesFA.at(i);
+    if (!g) return;
+    g.patchValue({ type: chip.type || 'Default', cost: chip.cost ?? 0, sale: chip.sale ?? 0 });
+  }
+
+  addCustomSize() {
+    const type = (this.customType || 'Custom').trim();
+    const sale = Number(this.customSale);
+    const cost = Number(this.customCost);
+    if (!type || isNaN(sale) || sale <= 0) {
+      this.toast.error('Enter valid type and price');
+      return;
+    }
+    const keyBase = this.activeProduct?.productId ?? this.activeProduct?.id;
+    const key = `${keyBase}_${type}`;
+    const entry = { ...this.activeProduct, selectedSize: { type, sale, cost: isNaN(cost) ? undefined : cost } };
+    if (this.selected.has(key)) {
+      const prev = this.selected.get(key)!;
+      prev.qty += 1;
+      this.selected.set(key, prev);
+    } else {
+      this.selected.set(key, { product: entry, qty: 1 });
+    }
+    this.closeSizeModal();
+  }
+}

@@ -99,6 +99,7 @@ export class ManagersListComponent implements OnInit {
           next: () => {
             this.toast.success('Manager deleted successfully');
             // Update UI and cache immediately
+            this.fetchManagers();
             this.managers = this.managers.filter((x) => x.id !== m.id);
             this.idb.clearStore('managers').then(() => this.idb.putAll('managers', this.managers as any[]));
           },

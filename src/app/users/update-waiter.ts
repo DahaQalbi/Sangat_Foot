@@ -74,7 +74,7 @@ export class UpdateWaiterComponent implements OnInit {
     };
 
     this.submitting = true;
-    this.staffService.updateWaiter(payload).subscribe({
+    this.staffService.updateManager(payload).subscribe({
       next: () => {
         this.submitting = false;
         this.toast.success('Waiter updated successfully');

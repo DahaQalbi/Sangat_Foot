@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 
 // Lightweight IndexedDB helper focused on simple key-value and list storage
-// DB: 'sangat_foot', version 3
+// DB: 'sangat_foot', version 4
 // Object stores:
 //  - 'waiters' with keyPath 'id'
 //  - 'managers' with keyPath 'id'
 //  - 'products' with keyPath 'productId'
+//  - 'orders' with keyPath 'id'
 
 @Injectable({ providedIn: 'root' })
 export class IdbService {
@@ -15,7 +16,7 @@ export class IdbService {
     if (this.dbPromise) return this.dbPromise;
 
     this.dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open('sangat_foot', 3);
+      const req = indexedDB.open('sangat_foot', 4);
       req.onupgradeneeded = () => {
         const db = req.result;
         if (!db.objectStoreNames.contains('waiters')) {
@@ -26,6 +27,9 @@ export class IdbService {
         }
         if (!db.objectStoreNames.contains('products')) {
           db.createObjectStore('products', { keyPath: 'productId' });
+        }
+        if (!db.objectStoreNames.contains('orders')) {
+          db.createObjectStore('orders', { keyPath: 'id' });
         }
       };
       req.onsuccess = () => resolve(req.result);

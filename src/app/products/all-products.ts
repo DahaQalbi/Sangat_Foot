@@ -12,7 +12,7 @@ export class AllProductsComponent implements OnInit, AfterViewInit {
   loading = false;
   error: string | null = null;
   products: any[] = [];
-public apiUrl=environment.apiUrl;
+public imgUrl=environment.imgUrl;
   categories: string[] = [];
   selectedCategory: string = 'All';
   categoryCounts: Record<string, number> = {};

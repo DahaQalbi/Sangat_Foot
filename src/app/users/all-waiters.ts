@@ -161,10 +161,11 @@ export class AllWaitersComponent implements OnInit {
     }).then((res) => {
       if (res.isConfirmed) {
         this.loading = true;
-        this.staffService.deleteWaiter(w.id as any).subscribe({
+        this.staffService.deleteManager(w.id as any).subscribe({
           next: () => {
             this.toast.success('Waiter deleted successfully');
             // Update UI immediately
+            this.fetchWaiters();
             this.waiters = this.waiters.filter((x) => x.id !== w.id);
             // Update cache (fire and forget)
             this.idb.clearStore('waiters').then(() => this.idb.putAll('waiters', this.waiters as any[]));

@@ -53,6 +53,35 @@
                             </ul>
                         </div>
                     </li>
+                    <li class="accordion menu nav-item">
+                        <button
+                            type="button"
+                            class="nav-link group w-full"
+                            [ngClass]="{ active: activeDropdown.includes('orders') }"
+                            (click)="toggleAccordion('orders')"
+                        >
+                            <div class="flex items-center">
+                                <icon-menu-components class="shrink-0 group-hover:!text-primary" />
+
+                                <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">
+                                    Orders
+                                </span>
+                            </div>
+                            <div [ngClass]="{ 'rtl:rotate-90 -rotate-90': !activeDropdown.includes('orders') }">
+                                <icon-caret-down />
+                            </div>
+                        </button>
+                        <div [@slideDownUp]="!activeDropdown.includes('orders')" class="accordion-content">
+                            <ul class="sub-menu text-gray-500">
+                                <li>
+                                    <a routerLink="/orders/add" routerLinkActive="active" (click)="toggleMobileMenu()">Add Order</a>
+                                </li>
+                                <li>
+                                    <a routerLink="/orders/list" routerLinkActive="active" (click)="toggleMobileMenu()">All Orders</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
 
                     <li class="accordion menu nav-item">
                         <button
@@ -111,6 +140,9 @@
                                 </li>
                                 <li>
                                     <a routerLink="/products/all-products" routerLinkActive="active" (click)="toggleMobileMenu()">All Products</a>
+                                </li>
+                                <li>
+                                    <a routerLink="/products/add-deal" routerLinkActive="active" (click)="toggleMobileMenu()">Add Deal</a>
                                 </li>
                             </ul>
                         </div>

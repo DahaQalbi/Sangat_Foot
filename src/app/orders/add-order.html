@@ -1,0 +1,31 @@
+<div class="panel">
+  <div class="mb-5 flex items-center justify-between">
+    <h5 class="text-lg font-extrabold text-red-600">Add Order</h5>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Customer Name</label>
+      <input type="text" class="form-input w-full" formControlName="customerName" placeholder="Enter customer name" />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Phone</label>
+      <input type="text" class="form-input w-full" formControlName="phone" placeholder="Enter phone" />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Items</label>
+      <textarea rows="4" class="form-textarea w-full" formControlName="items" placeholder="e.g. 1x Karahi, 2x Pizza"></textarea>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Notes</label>
+      <textarea rows="3" class="form-textarea w-full" formControlName="notes" placeholder="Optional notes..."></textarea>
+    </div>
+
+    <button type="submit" [disabled]="submitting || form.invalid" class="!mt-2 rounded bg-red-600 px-4 py-2.5 font-extrabold uppercase text-[#faac1b] shadow-sm transition-colors hover:bg-red-700 disabled:opacity-60">
+      Save Order
+    </button>
+  </form>
+</div>

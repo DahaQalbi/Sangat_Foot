@@ -1,0 +1,20 @@
+<div class="panel max-w-xl mx-auto">
+  <h5 class="mb-4 text-lg font-extrabold text-red-600">Table Details</h5>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
+    <div>
+      <label class="mb-1 block text-sm font-medium">Table Number</label>
+      <input type="text" class="form-input w-full" formControlName="tableNumber" placeholder="Enter table number" />
+    </div>
+
+    <div>
+      <label class="mb-1 block text-sm font-medium">Guest Name</label>
+      <input type="text" class="form-input w-full" formControlName="guestName" placeholder="Enter guest name" />
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button type="submit" class="btn btn-primary" [disabled]="submitting || form.invalid">Save</button>
+      <a routerLink="/orders/add" class="btn btn-outline-primary">Back</a>
+    </div>
+  </form>
+</div>

@@ -12,6 +12,7 @@ export class AddProductComponent implements OnInit {
   submitting = false;
   loadingCategories = true;
   categories: any[] = [];
+  previewUrl: string | null = null;
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
 
   constructor(
@@ -75,12 +76,16 @@ export class AddProductComponent implements OnInit {
     if (!file) return;
 
     const base64 = await this.toBase64(file);
+    // Use full data URL for preview
+    this.previewUrl = base64;
+    // Store stripped base64 in the form for backend
     this.form.patchValue({ image: this.stripDataUrlHeader(base64) });
   }
 
   clearImage() {
     this.form.patchValue({ image: '' });
     this.form.get('image')?.markAsPristine();
+    this.previewUrl = null;
     if (this.imageInputRef && this.imageInputRef.nativeElement) {
       this.imageInputRef.nativeElement.value = '';
     }

@@ -1,0 +1,103 @@
+<div class="panel">
+  <div class="mb-5 flex items-center justify-between">
+    <h5 class="text-lg font-extrabold text-red-600">All Deals</h5>
+    <div class="flex items-center gap-2">
+      <a routerLink="/products/add-deal" class="btn btn-primary">Add Deal</a>
+      <a routerLink="/products/all-products" class="btn btn-outline-primary">All Products</a>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading deals...</div>
+  <div *ngIf="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-transparent">{{ error }}</div>
+
+  <div *ngIf="!loading && !error">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div *ngFor="let d of deals" class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-[#0e1726]">
+        <div class="relative">
+          <ng-container *ngIf="getDealImages(d) as imgs">
+            <img [src]="imgs[currentSlide(d)]" alt="{{ d.name }}" class="h-40 w-full object-cover" />
+            <button type="button" class="absolute left-2 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-full bg-black/50 text-white hover:bg-black/70" (click)="prevImage(d)" aria-label="Prev">
+              ‹
+            </button>
+            <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-full bg-black/50 text-white hover:bg-black/70" (click)="nextImage(d)" aria-label="Next">
+              ›
+            </button>
+            <div class="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1">
+              <span *ngFor="let _ of imgs; let i = index" class="h-1.5 w-1.5 rounded-full" [ngClass]="{ 'bg-white': i === currentSlide(d), 'bg-white/40': i !== currentSlide(d) }"></span>
+            </div>
+          </ng-container>
+          <!-- Delete (bin) at top-left -->
+          <button type="button" class="absolute left-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-red-600 text-white shadow hover:bg-red-700" (click)="confirmDeleteDeal(d)" aria-label="Delete deal">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/>
+              <path d="M14 11v6"/>
+              <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+          <button type="button" class="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-red-600 text-white shadow hover:bg-red-700" (click)="placeOrderFromDeal(d)" aria-label="Add deal to order">
+            <span class="text-lg leading-none">+</span>
+          </button>
+        </div>
+        <div class="p-4">
+          <div class="mb-1 flex items-center justify-between">
+            <h6 class="text-sm font-extrabold text-gray-800 dark:text-gray-100">{{ d.name }}</h6>
+            <!-- Date hidden per request -->
+          </div>
+          <div class="text-xs font-semibold text-gray-700 dark:text-gray-300">Price: {{ d.sale }}</div>
+          <!-- Cost hidden per request; keep items below -->
+          <div class="mt-2 flex flex-wrap gap-2">
+            <div *ngFor="let it of (d.items || d.dealItem || [])" class="flex items-center gap-2 rounded border border-gray-200 px-2 py-1 text-xs dark:border-gray-700">
+              <img [src]="imgUrl + (it.image || '')" alt="{{ it.name || it.product_id }}" class="h-6 w-6 rounded object-cover" />
+              <span class="font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[8rem]">{{ it.name || ('#' + it.product_id) }}</span>
+              <span class="text-gray-500">{{ it.sizeType }}</span>
+              <span class="rounded bg-gray-100 px-1 text-[10px] text-gray-700">× {{ it.quantity }}</span>
+            </div>
+          </div>
+          <div class="mt-3">
+            <button type="button" class="btn btn-outline-primary btn-sm w-full" (click)="placeOrderFromDeal(d)">Add Deal to Order</button>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="!deals.length" class="col-span-full text-center text-gray-500 py-6">No deals found</div>
+    </div>
+  </div>
+
+  <!-- Sticky cart bar -->
+  <div class="fixed inset-x-0 bottom-0 z-40" *ngIf="cart.length">
+    <div class="mx-auto mb-3 w-full max-w-6xl px-3">
+      <div class="flex items-center justify-between rounded-lg bg-white/95 p-3 shadow-lg ring-1 ring-gray-200 backdrop-blur dark:bg-[#0e1726]/95 dark:ring-gray-700">
+        <div class="flex items-center gap-3">
+          <button type="button" class="grid h-9 w-9 place-items-center rounded-full bg-red-600 text-white shadow hover:bg-red-700" (click)="toggleCart()" [attr.aria-expanded]="cartOpen">
+            <span class="text-lg">🧺</span>
+          </button>
+          <div class="text-sm text-gray-700 dark:text-gray-200">
+            <div class="font-semibold">{{ cart.length }} item(s) selected</div>
+            <div class="text-xs text-gray-500">Total: {{ cartTotalsale | number:'1.0-2' }}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="clearCart()">Clear</button>
+          <button type="button" class="btn btn-primary btn-sm" (click)="proceedToOrder()">Proceed to Order</button>
+        </div>
+      </div>
+      <!-- Slide-up panel -->
+      <div *ngIf="cartOpen" class="mt-2 max-h-80 overflow-auto rounded-lg border border-gray-200 bg-white p-3 shadow dark:border-gray-700 dark:bg-[#0e1726]">
+        <div *ngFor="let c of cart; let i = index" class="flex items-center justify-between border-b border-gray-100 py-2 last:border-b-0 dark:border-gray-700">
+          <div class="min-w-0">
+            <div class="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">{{ c.name }}</div>
+            <div class="text-xs text-gray-500">Size: {{ c.selectedSize.type }} • Unit: {{ c.selectedSize.sale | number:'1.0-2' }}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" class="h-7 w-7 rounded border border-gray-300 text-sm hover:bg-gray-50 dark:border-gray-600" (click)="decQty(i)">-</button>
+            <div class="w-8 text-center text-sm">{{ c.qty }}</div>
+            <button type="button" class="h-7 w-7 rounded border border-gray-300 text-sm hover:bg-gray-50 dark:border-gray-600" (click)="incQty(i)">+</button>
+            <div class="w-20 text-right text-sm font-semibold">{{ (c.qty * (c.selectedSize.sale || 0)) | number:'1.0-2' }}</div>
+            <button type="button" class="h-7 w-7 rounded bg-red-50 text-red-600 hover:bg-red-100" title="Remove" (click)="removeCartItem(i)">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

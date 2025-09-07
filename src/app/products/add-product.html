@@ -4,21 +4,6 @@
     <a routerLink="/products/categories" class="btn btn-danger">Back to Categories</a>
   </div>
 
-  <div class="mb-4 border-b border-gray-200 dark:border-gray-700">
-    <nav class="-mb-px flex items-center gap-6">
-      <a routerLink="/products/add-product"
-         routerLinkActive="text-[#faac1b] border-red-600"
-         [routerLinkActiveOptions]="{ exact: true }"
-         class="px-1 pb-2 text-sm font-extrabold uppercase tracking-wide border-b-2 border-transparent text-gray-600 dark:text-gray-300">
-        Add Product
-      </a>
-      <a routerLink="/products/all-products"
-         routerLinkActive="text-[#faac1b] border-red-600"
-         class="px-1 pb-2 text-sm font-extrabold uppercase tracking-wide border-b-2 border-transparent text-gray-600 dark:text-gray-300">
-        All Products
-      </a>
-    </nav>
-  </div>
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6">
     <!-- Category selector -->
@@ -42,22 +27,39 @@
       </div>
     </div>
 
-    <!-- Image input + preview -->
+    <!-- Image selector box with inline preview -->
     <div>
-      <label class="mb-1 block font-medium">Image</label>
-      <input #imageInput type="file" accept="image/*" class="form-input w-full" (change)="onFileChange($event)" />
-      <div class="mt-3" *ngIf="form.get('image')?.value as img">
-        <div class="relative inline-block overflow-hidden rounded-xl border border-gray-200 shadow-md dark:border-gray-700">
-          <img [src]="img" alt="Preview" class="block h-40 w-40 object-cover" />
-          <button type="button" aria-label="Remove image" class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-red-600 text-[#faac1b] shadow hover:bg-red-700" (click)="clearImage()">
-            <!-- close icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+      <label class="mb-1 block font-medium">Product Image</label>
+      <div class="w-full flex justify-center">
+        <div class="relative cursor-pointer overflow-hidden rounded-xl border border-gray-200 shadow-md hover:ring-2 hover:ring-red-600/30 dark:border-gray-700"
+             (click)="imageInput.click()">
+          <ng-container *ngIf="previewUrl; else imagePlaceholder">
+            <img [src]="previewUrl" alt="Preview" class="block h-64 w-64 object-cover" />
+            <button type="button" aria-label="Remove image"
+                    class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-red-600 text-[#faac1b] shadow hover:bg-red-700"
+                    (click)="$event.stopPropagation(); clearImage();">
+              <!-- close icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </ng-container>
+          <ng-template #imagePlaceholder>
+            <div class="grid h-64 w-64 place-items-center bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+              <div class="flex flex-col items-center gap-1 text-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <span>Click to select image</span>
+              </div>
+            </div>
+          </ng-template>
         </div>
       </div>
+      <input #imageInput type="file" accept="image/*" class="hidden" (change)="onFileChange($event)" />
       <div class="mt-1 text-xs text-danger" *ngIf="form.get('image')?.touched && form.get('image')?.invalid">
         Image is required.
       </div>

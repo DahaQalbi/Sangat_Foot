@@ -1,10 +1,10 @@
 <div class="panel">
   <!-- Header -->
   <div class="mb-4 flex items-center justify-between">
-    <h5 class="text-lg font-extrabold text-red-600">Orders ({{ orders.length }})</h5>
+    <h5 class="text-lg font-extrabold text-red-600">Completed Orders ({{ orders.length }})</h5>
     <div class="flex items-center gap-2">
       <input type="text" class="form-input h-9 w-56" [(ngModel)]="search" placeholder="Search id, customer, table, waiter, status" />
-      <a routerLink="/orders/add" class="btn btn-primary">New Order</a>
+      <a routerLink="/orders/list" class="btn btn-outline-primary">All Orders</a>
     </div>
   </div>
 
@@ -14,34 +14,29 @@
 
   <!-- Grid of cards -->
   <div *ngIf="!loading && !error">
-    <div class="text-gray-500" *ngIf="!filtered.length">No orders yet.</div>
+    <div class="text-gray-500" *ngIf="!filtered.length">No completed orders yet.</div>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" *ngIf="filtered.length">
       <div *ngFor="let o of filtered" class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-[#0e1726]">
         <div class="mb-2 flex items-start justify-between">
           <div class="flex items-center gap-2">
-            <span class="rounded-full bg-purple-100 px-2 py-1 text-xs font-bold text-purple-700">{{ o.tableNo }}</span>
+            <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700">{{ o.tableNo }}</span>
             <div>
               <div class="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">{{ o.customer }}</div>
               <div class="text-xs text-gray-500">Order #{{ o.id }}</div>
             </div>
           </div>
-          <ng-container *ngIf="editingStatusId !== o.id; else editStatusTpl">
-            <button type="button" class="rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700 hover:brightness-95" *ngIf="o.status" (click)="startEditStatus(o.id)">
-              {{ o.status }}
-            </button>
+          <ng-container *ngIf="!isPaid(o); else paidTpl">
+            <button type="button" class="rounded bg-emerald-600 px-2 py-1 text-[10px] font-bold uppercase text-white hover:brightness-95" (click)="markPaid(o)">Mark Paid</button>
           </ng-container>
-          <ng-template #editStatusTpl>
-            <div class="flex items-center gap-1">
-              <select class="form-select h-7 !py-0 text-[10px]" [ngModel]="o.status" (ngModelChange)="applyStatus(o, $event)">
-                <option *ngFor="let st of statusOptions" [ngValue]="st">{{ st }}</option>
-              </select>
-              <button class="text-xs text-gray-500 hover:text-gray-800" (click)="cancelEditStatus()">✕</button>
+          <ng-template #paidTpl>
+            <div class="flex items-center gap-2">
+              <span class="rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700">Paid</span>
             </div>
           </ng-template>
         </div>
         <div class="mb-3 flex items-center justify-between text-xs text-gray-500">
           <div>Order Date: {{ o.created | date:'MMM dd, yyyy hh:mm a' }}</div>
-          <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-yellow-400"></span> Order Placed</div>
+          <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> Completed</div>
         </div>
         <div class="mb-4 text-xs text-gray-600" *ngIf="o.itemsCount > 0">{{ o.itemsCount }} Item(s)</div>
         <div class="flex items-center justify-between">

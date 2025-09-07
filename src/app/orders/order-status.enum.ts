@@ -1,5 +1,7 @@
 export enum OrderStatus {
-  Cooking = 'Cooking',
-  Pending = 'Pending',
-  Completed = 'Completed',
+  Pending = 'pending',
+  Cooking = 'cooking',
+  Completed = 'completed',
+  Cancel = 'cancel',
+  Paid = 'paid',
 }

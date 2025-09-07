@@ -40,6 +40,7 @@ export class TableInfoComponent implements OnInit {
   orderId!: number;
   draftOrder: any = null;
   summary: { items: any[]; totalsale: number; totalcost: number } | null = null;
+  dealId: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -67,6 +68,7 @@ export class TableInfoComponent implements OnInit {
       // capture navigation state (from previous page)
       this.draftOrder = (history.state && (history.state as any).orderDraft) || null;
       this.summary = (history.state && (history.state as any).summary) || null;
+      this.dealId = (history.state && (history.state as any).dealId) ?? null;
       // If summary missing (e.g., refresh), derive from IDB draft
       if (!this.summary) {
         try {
@@ -180,7 +182,7 @@ export class TableInfoComponent implements OnInit {
         sale,
         net: Number((sale - discount).toFixed(2)),
         status: 'pending',
-        deal_id: null,
+        deal_id: this.dealId ?? null,
         orderDetails,
       };
       // Call API to create order

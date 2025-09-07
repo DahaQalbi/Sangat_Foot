@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outline, seamless-style food doodles, neutral gray (not red) -->
+  <rect width="500" height="500" fill="white"/>
+  <g stroke="#cbd5e1" stroke-width="2.2" fill="none" opacity="0.95">
+    <!-- Keep all motifs at least 20px away from edges for seamless repeat feel -->
+
+    <!-- Pizza -->
+    <g transform="translate(60,70) rotate(-15)">
+      <path d="M0 0 L70 24 L12 86 Z"/>
+      <circle cx="24" cy="28" r="5"/>
+      <circle cx="42" cy="34" r="5"/>
+      <circle cx="30" cy="54" r="5"/>
+    </g>
+
+    <!-- Burger -->
+    <g transform="translate(330,70) rotate(8)">
+      <rect x="10" y="26" width="76" height="10" rx="5"/>
+      <rect x="10" y="44" width="76" height="10" rx="5"/>
+      <path d="M10 26c5-12 24-18 48-18s43 6 48 18"/>
+      <path d="M10 54c5 12 24 18 48 18s43-6 48-18"/>
+    </g>
+
+    <!-- Fries -->
+    <g transform="translate(92,210) rotate(12)">
+      <path d="M8 18h64l-10 70H18L8 18Z"/>
+      <path d="M18 18l6-12M30 18l6-12M42 18l6-12M54 18l6-12"/>
+    </g>
+
+    <!-- Hot dog -->
+    <g transform="translate(360,220) rotate(-10)">
+      <ellipse cx="48" cy="24" rx="56" ry="22"/>
+      <path d="M6 18c32 20 64 20 96 0"/>
+    </g>
+
+    <!-- Drink cup -->
+    <g transform="translate(220,115) rotate(-4)">
+      <rect x="14" y="24" width="56" height="64" rx="8"/>
+      <path d="M10 24h64"/>
+      <path d="M26 24l8-20"/>
+      <path d="M34 4h26"/>
+    </g>
+
+    <!-- Donut -->
+    <g transform="translate(410,360) rotate(5)">
+      <circle cx="0" cy="0" r="34"/>
+      <circle cx="0" cy="0" r="12"/>
+      <path d="M-22 -8c8 6 16 6 24 0"/>
+      <path d="M-16 12c12 3 24 3 36 0"/>
+    </g>
+
+    <!-- Cupcake -->
+    <g transform="translate(160,360) rotate(-6)">
+      <path d="M0 24h88l-10 40H10L0 24Z"/>
+      <path d="M8 24c4-14 20-22 36-22s32 8 36 22"/>
+      <circle cx="44" cy="-2" r="4"/>
+    </g>
+
+    <!-- Milkshake -->
+    <g transform="translate(270,300) rotate(7)">
+      <path d="M10 12h60l-8 20H18l-8-20Z"/>
+      <rect x="18" y="32" width="54" height="58" rx="10"/>
+      <path d="M40 12l6-14"/>
+    </g>
+
+    <!-- Tiny fillers -->
+    <g opacity="0.6" stroke-width="1.8">
+      <circle cx="130" cy="112" r="4"/>
+      <circle cx="300" cy="180" r="3"/>
+      <circle cx="220" cy="420" r="4"/>
+      <path d="M80 300l10 10M90 300l-10 10"/>
+      <path d="M460 140l8 8M468 140l-8 8"/>
+      <path d="M380 110l8-8M388 110l-8-8"/>
+      <path d="M200 230l8 8M208 230l-8 8"/>
+      <path d="M250 70l6 0M260 70l6 0M270 70l6 0"/>
+      <circle cx="60" cy="440" r="3"/>
+    </g>
+  </g>
+</svg>

@@ -1,6 +1,6 @@
-<div class="p-6">
-  <div class="mx-auto w-full max-w-[600px]">
-    <h1 class="mb-6 text-2xl font-extrabold uppercase text-primary">Add Employee</h1>
+<div class="p-6 min-h-[70vh] bg-white bg-[url('/assets/images/food-pattern-outline-dense.svg')] bg-repeat bg-[length:150px_150px]">
+  <div class="mx-auto w-full max-w-[600px] rounded-xl bg-white/80 p-6 backdrop-blur-sm shadow">
+    <h1 class="mb-6 text-2xl font-extrabold uppercase text-primary">Add Staff</h1>
     <form class="space-y-5 dark:text-white" [formGroup]="form" (ngSubmit)="onSubmit()">
       <div>
         <label for="Email">Email</label>
@@ -52,8 +52,8 @@
         <div class="mt-1 text-xs text-white-dark">Default is Manager as requested.</div>
       </div>
 
-      <button type="submit" [disabled]="submitting || form.invalid" class="btn btn-gradient !mt-6 w-full border-0 uppercase shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]">
-        Add Employee
+      <button type="submit" [disabled]="submitting || form.invalid" class="btn !mt-6 w-full border-0 uppercase bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-400 disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_10px_20px_-10px_rgba(239,68,68,0.44)]">
+        Add Staff
       </button>
     </form>
   </div>

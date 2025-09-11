@@ -1,8 +1,8 @@
 <div class="p-6">
   <div class="mx-auto w-full max-w-[900px]">
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-extrabold uppercase text-primary">All Managers</h1>
-      <a routerLink="/users/add-manager" class="btn btn-primary">Add Manager</a>
+      <h1 class="text-2xl font-extrabold uppercase text-primary">All Staff</h1>
+      <button type="button" (click)="openAddSidebar()" class="btn !bg-red-600 hover:!bg-red-700 text-white uppercase shadow-[0_10px_20px_-10px_rgba(239,68,68,0.44)]">Add Member</button>
     </div>
 
     <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading managers...</div>
@@ -30,6 +30,10 @@
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300"><span class="badge bg-primary/10 text-primary">{{ m.created_at | date:'longDate' }}</span></td>
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                 <div class="flex items-center gap-2">
+                  <button type="button" (click)="onView(m)" ngxTippy data-tippy-content="View Details" aria-label="View Details"
+                    class="grid h-8 w-8 place-items-center rounded-full border border-gray-200 text-blue-600 hover:bg-blue-600/10 hover:border-blue-600/30 dark:border-gray-700">
+                    <icon-eye class="h-4 w-4" />
+                  </button>
                   <button type="button" (click)="onEdit(m)" ngxTippy data-tippy-content="Update" aria-label="Update"
                     class="grid h-8 w-8 place-items-center rounded-full border border-gray-200 text-primary hover:bg-primary/10 hover:border-primary/30 dark:border-gray-700">
                     <icon-edit class="h-4 w-4" />
@@ -46,6 +50,365 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Member Sidebar -->
+<div *ngIf="showUpdateSidebar" class="fixed inset-0 z-[110] overflow-hidden">
+  <div class="absolute inset-0 bg-black/50" (click)="closeUpdateSidebar()"></div>
+  <div class="absolute right-0 top-0 h-full w-full sm:w-[560px] bg-white dark:bg-[#0e1726] shadow-2xl will-change-transform"
+       [style.transition]="'transform 300ms ease-in-out'"
+       [style.transform]="showUpdateSidebar ? 'translateX(0)' : 'translateX(100%)'">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-white">Edit Member</h2>
+      <button (click)="closeUpdateSidebar()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 overflow-y-auto h-full pb-28">
+      <form class="space-y-5" [formGroup]="editForm" (ngSubmit)="onSubmitUpdate()">
+        <!-- Email -->
+        <div>
+          <label for="edEmail">Email</label>
+          <input id="edEmail" type="email" formControlName="email" placeholder="Enter Email" class="form-input placeholder:text-white-dark" />
+        </div>
+        <!-- Password -->
+        <div>
+          <label for="edPassword">Password</label>
+          <input id="edPassword" type="password" formControlName="password" placeholder="Enter Password (leave blank to keep current)" class="form-input placeholder:text-white-dark" />
+          <p class="mt-1 text-xs text-gray-500">Leave blank to keep the current password.</p>
+        </div>
+        <!-- Name -->
+        <div>
+          <label for="edName">Name</label>
+          <input id="edName" type="text" formControlName="name" placeholder="Enter Name" class="form-input placeholder:text-white-dark" />
+        </div>
+        <!-- Phone -->
+        <div>
+          <label for="edPhone">Phone</label>
+          <input id="edPhone" type="text" formControlName="phone" placeholder="Enter Phone" class="form-input placeholder:text-white-dark" />
+        </div>
+        <!-- Uploads as Tiles (same as Add Member) -->
+        <div>
+          <h3 class="mb-2 text-lg font-semibold text-gray-800 dark:text-white">Uploads</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Agreement Upload -->
+            <div>
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Agreement Upload</label>
+              <div class="relative w-full h-28 border border-gray-200 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors overflow-hidden cursor-pointer" (click)="agreementEditInput.click()">
+                <button *ngIf="agreementPreview" type="button" (click)="removeEditAgreement(); $event.stopPropagation()" class="absolute top-1 right-1 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                </button>
+                <ng-container *ngIf="agreementPreview; else edAgreementPlaceholder">
+                  <ng-container *ngIf="isPdf(agreementFileType); else edAgreementImage">
+                    <div class="w-full h-full grid place-items-center text-gray-600">
+                      <span class="text-xs font-semibold">PDF Selected</span>
+                    </div>
+                  </ng-container>
+                  <ng-template #edAgreementImage>
+                    <img [src]="agreementPreview" class="w-full h-full object-cover" alt="Agreement" />
+                  </ng-template>
+                </ng-container>
+                <ng-template #edAgreementPlaceholder>
+                  <div class="flex flex-col items-center justify-center w-full h-full">
+                    <svg class="w-12 h-12 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2H4zm3 4a2 2 0 110-4 2 2 0 010 4zm13 8H4l4-6 3 4 2-3 7 5z"/></svg>
+                  </div>
+                </ng-template>
+                <span class="absolute -top-3 -right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-300 shadow border border-gray-200">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                </span>
+              </div>
+              <input #agreementEditInput type="file" accept=".pdf,image/*" (change)="onEditAgreementSelect($event)" class="hidden" />
+            </div>
+
+            <!-- CNIC Tile -->
+            <div>
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">ID Card</label>
+              <div class="relative w-full h-28 border border-gray-200 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors overflow-hidden cursor-pointer" (click)="cnicEditInput.click()">
+                <button *ngIf="cnicPreview" type="button" (click)="removeEditCnic(); $event.stopPropagation()" class="absolute top-1 right-1 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                </button>
+                <ng-container *ngIf="cnicPreview; else edCnicPlaceholder">
+                  <img [src]="cnicPreview" class="w-full h-full object-cover" alt="CNIC" />
+                </ng-container>
+                <ng-template #edCnicPlaceholder>
+                  <div class="flex flex-col items-center justify-center w-full h-full">
+                    <svg class="w-12 h-12 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h14a2 2 0 012 2v3H3V5zm0 5h18v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6zm4 3h6v2H7v-2z"/></svg>
+                  </div>
+                </ng-template>
+                <span class="absolute -top-3 -right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-300 shadow border border-gray-200">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                </span>
+              </div>
+              <input #cnicEditInput type="file" accept="image/*" (change)="onEditCnicSelect($event)" class="hidden" />
+            </div>
+
+            <!-- Image Tile -->
+            <div>
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Image</label>
+              <div class="relative w-full h-28 border border-gray-200 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors overflow-hidden cursor-pointer" (click)="imageEditInput.click()">
+                <button *ngIf="imagePreview" type="button" (click)="removeEditImage(); $event.stopPropagation()" class="absolute top-1 right-1 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                </button>
+                <ng-container *ngIf="imagePreview; else edImagePlaceholder">
+                  <img [src]="imagePreview" class="w-full h-full object-cover" alt="Image" />
+                </ng-container>
+                <ng-template #edImagePlaceholder>
+                  <div class="flex flex-col items-center justify-center w-full h-full">
+                    <svg class="w-12 h-12 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 7a2 2 0 012-2h2l1-1h6l1 1h2a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7zm8 2a4 4 0 100 8 4 4 0 000-8z"/></svg>
+                  </div>
+                </ng-template>
+                <span class="absolute -top-3 -right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-300 shadow border border-gray-200">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                </span>
+              </div>
+              <input #imageEditInput type="file" accept="image/*" (change)="onEditImageSelect($event)" class="hidden" />
+            </div>
+          </div>
+        </div>
+        <!-- Role -->
+        <div>
+          <label for="edRole">Role</label>
+          <select id="edRole" class="form-select" formControlName="role">
+            <option *ngFor="let r of roles" [ngValue]="r">{{ r }}</option>
+          </select>
+        </div>
+        <!-- Actions -->
+        <div class="flex gap-3 pt-2">
+          <button type="submit" [disabled]="updating || editForm.invalid" class="btn !bg-red-600 hover:!bg-red-700 text-white uppercase flex-1">
+            {{ updating ? 'Updating...' : 'Update' }}
+          </button>
+          <button type="button" (click)="closeUpdateSidebar()" class="btn btn-outline !bg-transparent !text-red-600 hover:!bg-red-600/10 flex-1">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Member Sidebar -->
+<div *ngIf="showAddSidebar" class="fixed inset-0 z-[100] overflow-hidden">
+  <div class="absolute inset-0 bg-black/50" (click)="closeAddSidebar()"></div>
+  <div class="absolute right-0 top-0 h-full w-full sm:w-[480px] bg-white dark:bg-[#0e1726] shadow-2xl will-change-transform"
+       [style.transition]="'transform 300ms ease-in-out'"
+       [style.transform]="showAddSidebar ? 'translateX(0)' : 'translateX(100%)'">
+    <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-white">Add Member</h2>
+      <button (click)="closeAddSidebar()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto h-full pb-28">
+      <form class="space-y-5" [formGroup]="addForm" (ngSubmit)="onSubmitAdd()">
+        <div>
+          <label for="addEmail">Email</label>
+          <input id="addEmail" formControlName="email" type="email" placeholder="Enter Email" class="form-input placeholder:text-white-dark" />
+        </div>
+        <div>
+          <label for="addPassword">Password</label>
+          <input id="addPassword" formControlName="password" type="password" placeholder="Enter Password" class="form-input placeholder:text-white-dark" />
+        </div>
+        <div>
+          <label for="addName">Name</label>
+          <input id="addName" formControlName="name" type="text" placeholder="Enter Name" class="form-input placeholder:text-white-dark" />
+        </div>
+        <div>
+          <label for="addPhone">Phone</label>
+          <input id="addPhone" formControlName="phone" type="text" placeholder="Enter Phone" class="form-input placeholder:text-white-dark" />
+        </div>
+        <!-- Uploads as Tiles -->
+        <div>
+          <h3 class="mb-2 text-lg font-semibold text-gray-800 dark:text-gray-200">Uploads</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Agreement Tile -->
+            <div>
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Agreement Upload</label>
+              <div class="relative w-full h-28 border border-gray-200 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors overflow-hidden cursor-pointer" (click)="agreementAddInput.click()">
+                <button *ngIf="agreementPreview" type="button" (click)="removeAddAgreement(); $event.stopPropagation()" class="absolute top-1 right-1 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                </button>
+                <ng-container *ngIf="agreementPreview; else addAgreementPlaceholder">
+                  <ng-container *ngIf="isPdf(agreementFileType); else addAgreementImage">
+                    <div class="w-full h-full grid place-items-center text-gray-600">
+                      <span class="text-xs font-semibold">PDF Selected</span>
+                    </div>
+                  </ng-container>
+                  <ng-template #addAgreementImage>
+                    <img [src]="agreementPreview" class="w-full h-full object-cover" alt="Agreement" />
+                  </ng-template>
+                </ng-container>
+                <ng-template #addAgreementPlaceholder>
+                  <div class="flex flex-col items-center justify-center w-full h-full">
+                    <svg class="w-12 h-12 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2H4zm3 4a2 2 0 110-4 2 2 0 010 4zm13 8H4l4-6 3 4 2-3 7 5z"/></svg>
+                  </div>
+                </ng-template>
+                <!-- upload badge -->
+                <span class="absolute -top-3 -right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-300 shadow border border-gray-200">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                </span>
+              </div>
+              <input #agreementAddInput type="file" accept=".pdf,image/*" (change)="onAddAgreementSelect($event)" class="hidden" />
+            </div>
+
+            <!-- CNIC Tile -->
+            <div>
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">ID Card</label>
+              <div class="relative w-full h-28 border border-gray-200 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors overflow-hidden cursor-pointer" (click)="cnicAddInput.click()">
+                <button *ngIf="cnicPreview" type="button" (click)="removeAddCnic(); $event.stopPropagation()" class="absolute top-1 right-1 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                </button>
+                <ng-container *ngIf="cnicPreview; else addCnicPlaceholder">
+                  <img [src]="cnicPreview" class="w-full h-full object-cover" alt="CNIC" />
+                </ng-container>
+                <ng-template #addCnicPlaceholder>
+                  <div class="flex flex-col items-center justify-center w-full h-full">
+                    <svg class="w-12 h-12 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h14a2 2 0 012 2v3H3V5zm0 5h18v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6zm4 3h6v2H7v-2z"/></svg>
+                  </div>
+                </ng-template>
+                <span class="absolute -top-3 -right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-300 shadow border border-gray-200">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                </span>
+              </div>
+              <input #cnicAddInput type="file" accept="image/*" (change)="onAddCnicSelect($event)" class="hidden" />
+            </div>
+
+            <!-- Image Tile -->
+            <div>
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Image</label>
+              <div class="relative w-full h-28 border border-gray-200 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors overflow-hidden cursor-pointer" (click)="imageAddInput.click()">
+                <button *ngIf="imagePreview" type="button" (click)="removeAddImage(); $event.stopPropagation()" class="absolute top-1 right-1 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                </button>
+                <ng-container *ngIf="imagePreview; else addImagePlaceholder">
+                  <img [src]="imagePreview" class="w-full h-full object-cover" alt="Image" />
+                </ng-container>
+                <ng-template #addImagePlaceholder>
+                  <div class="flex flex-col items-center justify-center w-full h-full">
+                    <svg class="w-12 h-12 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 7a2 2 0 012-2h2l1-1h6l1 1h2a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7zm8 2a4 4 0 100 8 4 4 0 000-8z"/></svg>
+                  </div>
+                </ng-template>
+                <span class="absolute -top-3 -right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-300 shadow border border-gray-200">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                </span>
+              </div>
+              <input #imageAddInput type="file" accept="image/*" (change)="onAddImageSelect($event)" class="hidden" />
+            </div>
+          </div>
+        </div>
+        <div>
+          <label for="addRole">Role</label>
+          <select id="addRole" formControlName="role" class="form-select">
+            <option *ngFor="let r of roles" [ngValue]="r">{{ r }}</option>
+          </select>
+        </div>
+        <div class="flex gap-3">
+          <button type="submit" [disabled]="submitting" class="btn !bg-red-600 hover:!bg-red-700 text-white uppercase flex-1">
+            {{ submitting ? 'Adding...' : 'Add Member' }}
+          </button>
+          <button type="button" (click)="closeAddSidebar()" class="btn btn-outline flex-1">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar Modal -->
+<div *ngIf="showSidebar" class="fixed inset-0 z-50 overflow-hidden">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" (click)="closeSidebar()"></div>
+  
+  <!-- Sidebar -->
+  <div class="absolute right-0 top-0 h-full w-96 bg-white dark:bg-[#0e1726] shadow-xl transform transition-transform duration-300 ease-in-out">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-white">Staff Details</h2>
+      <button (click)="closeSidebar()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 overflow-y-auto h-full pb-24" *ngIf="selectedManager">
+      <!-- Profile Image -->
+      <div class="flex justify-end mb-6 relative">
+        <div class="w-20 h-20 bg-gray-300 dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
+          <svg class="w-12 h-12 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+        </div>
+        <div class="absolute top-1 right-1 w-4 h-4 bg-white dark:bg-gray-200 rounded-full"></div>
+      </div>
+
+      <!-- User Details -->
+      <div class="space-y-3">
+        <div class="flex">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">Name:</span>
+          <span class="text-sm text-blue-600 dark:text-blue-400 font-medium">{{ selectedManager.name || '-' }}</span>
+        </div>
+        <div class="flex">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">Email:</span>
+          <span class="text-sm text-gray-900 dark:text-white">{{ selectedManager.email || '-' }}</span>
+        </div>
+        <div class="flex">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">Number:</span>
+          <span class="text-sm text-gray-900 dark:text-white">{{ selectedManager.phone || '-' }}</span>
+        </div>
+        <div class="flex">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">Role:</span>
+          <span class="text-sm text-gray-900 dark:text-white">Manager</span>
+        </div>
+        <div class="flex">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">Agreement:</span>
+          <a href="#" class="text-sm text-blue-600 hover:text-blue-800 underline">Download Agreement</a>
+        </div>
+      </div>
+
+      <!-- ID Card Section (placeholder to mirror design) -->
+      <div class="mt-8">
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">ID CARD:</p>
+        <div class="w-full bg-gray-300 dark:bg-gray-700 rounded-xl p-6 flex items-center justify-center relative" style="height: 140px;">
+          <svg class="w-16 h-16 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <div class="absolute top-3 right-3 w-6 h-6 bg-white dark:bg-gray-200 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="absolute bottom-0 left-0 right-0 p-6 bg-white dark:bg-[#0e1726] border-t border-gray-200 dark:border-gray-600">
+      <div class="flex gap-3">
+        <button (click)="selectedManager && onEdit(selectedManager)" class="flex-1 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-md font-medium transition-colors">
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+          Update
+        </button>
+        <button (click)="closeSidebar()" class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          Cancel
+        </button>
       </div>
     </div>
   </div>

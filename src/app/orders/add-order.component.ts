@@ -40,6 +40,18 @@ export class AddOrderComponent {
   customCost: number | null = null;
   customSale: number | null = null;
 
+  // ----- Order Side Modal (Table Info) -----
+  orderSidebarOpen = false;
+  orderForm!: FormGroup;
+  showDiscount = false;
+  orderId: number = 0;
+  // totals
+  sale = 0;
+  sgstAmount = 0;
+  cgstAmount = 0;
+  net = 0;
+  totalQty = 0;
+
   constructor(
     private fb: FormBuilder,
     private idb: IdbService,
@@ -315,6 +327,8 @@ export class AddOrderComponent {
       }
     }
     this.closeSizeModal();
+    // open order sidebar so user can finalize details
+    this.openOrderSidebar();
   }
 
   selectChipForRow(chip: { type: string; cost: number; sale: number }) {
@@ -344,5 +358,115 @@ export class AddOrderComponent {
       this.selected.set(key, { product: entry, qty: 1 });
     }
     this.closeSizeModal();
+    // open order sidebar so user can finalize details
+    this.openOrderSidebar();
+  }
+
+  // ---------- Order Side Modal helpers ----------
+  private buildOrderFormFromSelection(): void {
+    const details = Array.from(this.selected.values()).map(({ product, qty }) => {
+      const name = product?.name || '';
+      const sale = this.priceOf(product);
+      return this.fb.group({ name: [name], qty: [qty, [Validators.min(1)]], sale: [sale, [Validators.min(0)]], note: [''] });
+    });
+    this.orderForm = this.fb.group({
+      delivery_type: ['dine-in', [Validators.required]],
+      tableNo: [''],
+      delivery_fee: [0],
+      address: [''],
+      discount: [0],
+      sgst: [0],
+      cgst: [0],
+      note: [''],
+      orderDetails: this.fb.array(details),
+    });
+    this.onRecalc();
+  }
+
+  get orderDetails(): FormArray<FormGroup> {
+    return this.orderForm.get('orderDetails') as FormArray<FormGroup>;
+  }
+
+  openOrderSidebar(): void {
+    if (!this.selected.size) { this.toast.error('Please add items first'); return; }
+    this.orderId = Date.now();
+    this.buildOrderFormFromSelection();
+    this.orderSidebarOpen = true;
+  }
+
+  closeOrderSidebar(): void { this.orderSidebarOpen = false; }
+
+  toggleDiscount(): void { this.showDiscount = !this.showDiscount; }
+
+  onRecalc(): void {
+    if (!this.orderForm) return;
+    const v = this.orderForm.value;
+    let sale = 0; let qty = 0;
+    for (const g of this.orderDetails.controls) {
+      const row = g.value as any;
+      const q = Number(row.qty) || 0;
+      const s = Number(row.sale) || 0;
+      sale += q * s;
+      qty += q;
+    }
+    this.totalQty = qty;
+    this.sale = sale;
+    const sgstPct = Number(v.sgst) || 0;
+    const cgstPct = Number(v.cgst) || 0;
+    const delivery = Number(v.delivery_fee) || 0;
+    const discount = Number(v.discount) || 0;
+    this.sgstAmount = (sale * sgstPct) / 100;
+    this.cgstAmount = (sale * cgstPct) / 100;
+    this.net = Math.max(0, sale + delivery + this.sgstAmount + this.cgstAmount - discount);
+  }
+
+  onSubmitOrder(): void {
+    if (!this.orderForm || this.orderForm.invalid) return;
+    const items = this.orderDetails.controls.map((g) => {
+      const row = g.value as any;
+      return {
+        qty: Number(row.qty) || 0,
+        productId: undefined,
+        name: row.name,
+        category: '',
+        selectedSize: { type: 'Default', sale: Number(row.sale) || 0, cost: 0 },
+      };
+    });
+    const totalsale = items.reduce((a, r) => a + r.selectedSize.sale * r.qty, 0);
+    const totalcost = 0;
+    this.router.navigate(['/orders/table'], {
+      queryParams: { id: this.orderId },
+      state: {
+        orderDraft: {
+          id: this.orderId,
+          customerName: '',
+          phone: '',
+          notes: this.orderForm.value?.note || '',
+          items: [],
+          total: this.net,
+          created_at: new Date().toISOString(),
+          status: 'draft',
+        },
+        summary: { items, totalsale, totalcost },
+      },
+    });
+  }
+
+  // Row helpers for orderDetails
+  incQty(i: number): void {
+    const g = this.orderDetails.at(i);
+    const q = Number(g.value.qty) || 0;
+    g.patchValue({ qty: q + 1 });
+    this.onRecalc();
+  }
+  decQty(i: number): void {
+    const g = this.orderDetails.at(i);
+    const q = Number(g.value.qty) || 0;
+    g.patchValue({ qty: Math.max(1, q - 1) });
+    this.onRecalc();
+  }
+  removeRow(i: number): void {
+    this.orderDetails.removeAt(i);
+    this.onRecalc();
   }
 }

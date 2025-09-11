@@ -16,6 +16,8 @@ export class OrdersListComponent implements OnInit {
   statusOptions = Object.values(OrderStatus);
   // search
   search = '';
+  // order type filter tab: 'all' | 'delivery' | 'dine-in'
+  selectedTab: 'all' | 'delivery' | 'dine-in' = 'all'; 
 
   constructor(private orderService: OrderService) {}
 
@@ -24,9 +26,17 @@ export class OrdersListComponent implements OnInit {
   }
 
   get filtered(): any[] {
+    // 1) apply type tab
+    let list = (this.orders || []);
+    if (this.selectedTab === 'delivery') {
+      list = list.filter((o: any) => (o.orderType === 'delivery'));
+    } else if (this.selectedTab === 'dine-in') {
+      list = list.filter((o: any) => (o.orderType === 'dine-in'));
+    }
+    // 2) apply search
     const q = (this.search || '').toLowerCase().trim();
-    if (!q) return this.orders;
-    return (this.orders || []).filter((o: any) => {
+    if (!q) return list;
+    return list.filter((o: any) => {
       return (
         String(o.id).includes(q) ||
         String(o.customer || '').toLowerCase().includes(q) ||
@@ -59,6 +69,9 @@ export class OrdersListComponent implements OnInit {
     const created = o?.created_at || o?.createdAt || o?.orderDate || new Date().toISOString();
     const total = Number(o?.sale ?? o?.total ?? o?.totalsale ?? 0) || 0;
     const itemsCount = Array.isArray(o?.items) ? o.items.length : (Array.isArray(o?.orderDetails) ? o.orderDetails.length : (o?.items_count || 0));
+    // normalize order type: derive from orderType or delivery_type
+    const rawType = (o?.orderType ?? o?.delivery_type ?? o?.type ?? '').toString().toLowerCase();
+    const orderType = rawType === 'delivery' ? 'delivery' : 'dine-in';
     return {
       id: o?.id ?? o?._id ?? idx,
       tableNo: o?.tableNo || o?.table || o?.table_number || 'T-?',
@@ -68,6 +81,7 @@ export class OrdersListComponent implements OnInit {
       created,
       customer: o?.customerName || o?.customer || 'Guest',
       waiter: o?.waiterName || o?.waiter || '',
+      orderType,
     };
   }
 

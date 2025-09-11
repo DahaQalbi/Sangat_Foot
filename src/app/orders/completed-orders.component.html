@@ -8,6 +8,22 @@
     </div>
   </div>
 
+  <!-- Type Tabs -->
+  <div class="mb-3 flex flex-wrap items-center gap-2">
+    <button type="button"
+            class="rounded-full border px-4 py-1.5 text-sm transition"
+            [ngClass]="selectedTab==='all' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'"
+            (click)="selectedTab='all'">All</button>
+    <button type="button"
+            class="rounded-full border px-4 py-1.5 text-sm transition"
+            [ngClass]="selectedTab==='delivery' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'"
+            (click)="selectedTab='delivery'">Delivery</button>
+    <button type="button"
+            class="rounded-full border px-4 py-1.5 text-sm transition"
+            [ngClass]="selectedTab==='dine-in' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'"
+            (click)="selectedTab='dine-in'">Dine-in</button>
+  </div>
+
   <!-- States -->
   <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading orders...</div>
   <div *ngIf="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-transparent">{{ error }}</div>

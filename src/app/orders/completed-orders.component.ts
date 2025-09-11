@@ -18,6 +18,8 @@ export class CompletedOrdersComponent implements OnInit {
   logoSrc: string = (environment.logo && environment.logo.trim()) ? environment.logo : this.defaultLogo;
   // search
   search = '';
+  // order type filter tab: 'all' | 'delivery' | 'dine-in'
+  selectedTab: 'all' | 'delivery' | 'dine-in' = 'all';
 
   constructor(private orderService: OrderService, private toast: ToastService) {}
 
@@ -43,23 +45,28 @@ export class CompletedOrdersComponent implements OnInit {
   }
 
   get filtered(): any[] {
+    // apply type tab
+    let list = (this.orders || []);
+    if (this.selectedTab === 'delivery') list = list.filter((o: any) => o.orderType === 'delivery');
+    else if (this.selectedTab === 'dine-in') list = list.filter((o: any) => o.orderType === 'dine-in');
+    // apply search
     const q = (this.search || '').toLowerCase().trim();
-    if (!q) return this.orders;
-    return (this.orders || []).filter((o: any) => {
-      return (
-        String(o.id).includes(q) ||
-        String(o.customer || '').toLowerCase().includes(q) ||
-        String(o.tableNo || '').toLowerCase().includes(q) ||
-        String(o.waiter || '').toLowerCase().includes(q) ||
-        String(o.status || '').toLowerCase().includes(q)
-      );
-    });
+    if (!q) return list;
+    return list.filter((o: any) => (
+      String(o.id).includes(q) ||
+      String(o.customer || '').toLowerCase().includes(q) ||
+      String(o.tableNo || '').toLowerCase().includes(q) ||
+      String(o.waiter || '').toLowerCase().includes(q) ||
+      String(o.status || '').toLowerCase().includes(q)
+    ));
   }
 
   private toCard(o: any, idx: number) {
     const created = o?.created_at || o?.createdAt || o?.orderDate || new Date().toISOString();
     const total = Number(o?.sale ?? o?.total ?? o?.totalsale ?? 0) || 0;
     const itemsCount = Array.isArray(o?.items) ? o.items.length : (Array.isArray(o?.orderDetails) ? o.orderDetails.length : (o?.items_count || 0));
+    const rawType = (o?.orderType ?? o?.delivery_type ?? o?.type ?? '').toString().toLowerCase();
+    const orderType = rawType === 'delivery' ? 'delivery' : 'dine-in';
     return {
       id: o?.id ?? o?._id ?? idx,
       tableNo: o?.tableNo || o?.table || o?.table_number || 'T-?',
@@ -69,6 +76,7 @@ export class CompletedOrdersComponent implements OnInit {
       created,
       customer: o?.customerName || o?.customer || 'Guest',
       waiter: o?.waiterName || o?.waiter || '',
+      orderType,
     };
   }
 

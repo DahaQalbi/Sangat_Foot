@@ -12,6 +12,22 @@ import { environment } from 'src/environments/environment';
       <input type="text" class="form-input h-9 w-56" [(ngModel)]="search" placeholder="Search id, customer, table, waiter, status" />
     </div>
 
+    <!-- Type Tabs -->
+    <div class="mb-3 flex flex-wrap items-center gap-2">
+      <button type="button"
+              class="rounded-full border px-4 py-1.5 text-sm transition"
+              [ngClass]="selectedTab==='all' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'"
+              (click)="selectedTab='all'">All</button>
+      <button type="button"
+              class="rounded-full border px-4 py-1.5 text-sm transition"
+              [ngClass]="selectedTab==='delivery' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'"
+              (click)="selectedTab='delivery'">Delivery</button>
+      <button type="button"
+              class="rounded-full border px-4 py-1.5 text-sm transition"
+              [ngClass]="selectedTab==='dine-in' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'"
+              (click)="selectedTab='dine-in'">Dine-in</button>
+    </div>
+
     <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading orders...</div>
     <div *ngIf="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-transparent">{{ error }}</div>
 
@@ -28,6 +44,7 @@ import { environment } from 'src/environments/environment';
               </div>
             </div>
             <div class="flex items-center gap-2">
+              <span class="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-700 dark:bg-white/10 dark:text-gray-200">{{ o.orderType }}</span>
               <span class="rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700">Paid</span>
               <button type="button" class="rounded border border-gray-300 px-2 py-1 text-[10px] font-semibold hover:bg-gray-50" (click)="printInvoice(o)">Print PDF</button>
             </div>
@@ -55,6 +72,8 @@ export class PaidOrdersComponent implements OnInit {
   error: string | null = null;
   orders: any[] = [];
   search = '';
+  // order type filter tab: 'all' | 'delivery' | 'dine-in'
+  selectedTab: 'all' | 'delivery' | 'dine-in' = 'all';
   readonly defaultLogo = '/assets/images/logo_Sangat.png';
   // normalize env logo to ensure leading '/'
   private normalizeLogoPath(p?: string): string {
@@ -90,23 +109,28 @@ export class PaidOrdersComponent implements OnInit {
   }
 
   get filtered(): any[] {
+    // type tab first
+    let list = (this.orders || []);
+    if (this.selectedTab === 'delivery') list = list.filter((o: any) => o.orderType === 'delivery');
+    else if (this.selectedTab === 'dine-in') list = list.filter((o: any) => o.orderType === 'dine-in');
+    // then search
     const q = (this.search || '').toLowerCase().trim();
-    if (!q) return this.orders;
-    return (this.orders || []).filter((o: any) => {
-      return (
-        String(o.id).includes(q) ||
-        String(o.customer || '').toLowerCase().includes(q) ||
-        String(o.tableNo || '').toLowerCase().includes(q) ||
-        String(o.waiter || '').toLowerCase().includes(q) ||
-        String(o.status || '').toLowerCase().includes(q)
-      );
-    });
+    if (!q) return list;
+    return list.filter((o: any) => (
+      String(o.id).includes(q) ||
+      String(o.customer || '').toLowerCase().includes(q) ||
+      String(o.tableNo || '').toLowerCase().includes(q) ||
+      String(o.waiter || '').toLowerCase().includes(q) ||
+      String(o.status || '').toLowerCase().includes(q)
+    ));
   }
 
   private toCard(o: any, idx: number) {
     const created = o?.created_at || o?.createdAt || o?.orderDate || new Date().toISOString();
     const total = Number(o?.sale ?? o?.total ?? o?.totalsale ?? 0) || 0;
     const itemsCount = Array.isArray(o?.items) ? o.items.length : (Array.isArray(o?.orderDetails) ? o.orderDetails.length : (o?.items_count || 0));
+    const rawType = (o?.orderType ?? o?.delivery_type ?? o?.type ?? '').toString().toLowerCase();
+    const orderType = rawType === 'delivery' ? 'delivery' : 'dine-in';
     return {
       id: o?.id ?? o?._id ?? idx,
       tableNo: o?.tableNo || o?.table || o?.table_number || 'T-?',
@@ -116,6 +140,7 @@ export class PaidOrdersComponent implements OnInit {
       created,
       customer: o?.customerName || o?.customer || 'Guest',
       waiter: o?.waiterName || o?.waiter || '',
+      orderType,
     };
   }
 

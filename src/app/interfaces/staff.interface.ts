@@ -6,6 +6,10 @@ export interface AddManagePayload {
   role: Role; // e.g., Role.Manager
   name: string;
   phone: string;
+  cnic: string;
+  image?: string; // base64 encoded image
+  agreement: string; // base64 encoded agreement document
+  idCard: string; // base64 encoded ID card
 }
 
 export interface ManagerItem {

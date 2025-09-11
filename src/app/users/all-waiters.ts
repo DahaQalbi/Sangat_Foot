@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { IdbService } from 'src/app/services/idb.service';
 import { ToastService } from 'src/app/services/toast.service';
 import Swal from 'sweetalert2';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 
 @Component({
   templateUrl: './all-waiters.html',
@@ -16,12 +17,22 @@ export class AllWaitersComponent implements OnInit {
   error: string | null = null;
   waiters: ManagerItem[] = [];
   passwordVisible: Record<string, boolean> = {};
+  
+  // Sidebar modal properties
+  showSidebar = false;
+  selectedWaiter: ManagerItem | null = null;
+
+  // Update sidebar (edit waiter)
+  showUpdateSidebar = false;
+  updateForm!: FormGroup;
+  updating = false;
 
   constructor(
     private staffService: StaffService,
     private router: Router,
     private toast: ToastService,
     private idb: IdbService,
+    private fb: FormBuilder,
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -131,7 +142,7 @@ export class AllWaitersComponent implements OnInit {
   }
 
   onEdit(w: ManagerItem): void {
-    this.router.navigate(['/users/update-waiter'], { state: { waiter: w } });
+    this.openUpdateSidebar(w);
   }
 
   onDelete(w: ManagerItem): void {
@@ -194,5 +205,66 @@ export class AllWaitersComponent implements OnInit {
   masked(pw?: string): string {
     if (!pw) return '-';
     return '•'.repeat(Math.min(pw.length, 12));
+  }
+
+  // Sidebar modal methods
+  onView(w: ManagerItem): void {
+    this.selectedWaiter = w;
+    this.showSidebar = true;
+  }
+
+  closeSidebar(): void {
+    this.showSidebar = false;
+    this.selectedWaiter = null;
+  }
+
+  // ----- Update Sidebar Methods -----
+  private buildUpdateForm(w: ManagerItem): void {
+    this.updateForm = this.fb.group({
+      id: [w?.id, [Validators.required]],
+      name: [w?.name || '', [Validators.required, Validators.minLength(2)]],
+      email: [w?.email || '', [Validators.required, Validators.email]],
+      phone: [w?.phone || '', [Validators.required]],
+      password: [w?.password || '', [Validators.minLength(6)]],
+    });
+  }
+
+  openUpdateSidebar(w: ManagerItem): void {
+    this.selectedWaiter = w;
+    this.buildUpdateForm(w);
+    this.showUpdateSidebar = true;
+  }
+
+  closeUpdateSidebar(): void {
+    this.showUpdateSidebar = false;
+    this.selectedWaiter = null;
+  }
+
+  onSubmitUpdate(): void {
+    if (!this.updateForm || this.updateForm.invalid) {
+      this.updateForm?.markAllAsTouched();
+      return;
+    }
+    const { id, name, email, phone, password } = this.updateForm.value;
+    const payload: any = { id, name, email, phone };
+    if (password) payload.password = password;
+    this.updating = true;
+    this.staffService.updateWaiter(payload).subscribe({
+      next: (resp) => {
+        this.updating = false;
+        if ((resp as any)?.error === true) {
+          this.toast.error((resp as any)?.message || 'Failed to update waiter');
+          return;
+        }
+        this.toast.success('Waiter updated successfully');
+        this.closeUpdateSidebar();
+        this.fetchWaiters();
+      },
+      error: (err) => {
+        this.updating = false;
+        const msg = err?.error?.message || 'Failed to update waiter';
+        this.toast.error(msg);
+      },
+    });
   }
 }

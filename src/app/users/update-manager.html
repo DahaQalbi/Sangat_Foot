@@ -1,5 +1,5 @@
-<div class="p-6">
-  <div class="mx-auto w-full max-w-[600px]">
+<div class="p-6 min-h-[70vh] bg-white bg-[url('/assets/images/food-pattern-outline-dense.svg')] bg-repeat bg-[length:150px_150px]">
+  <div class="mx-auto w-full max-w-[600px] rounded-xl bg-white/80 p-6 backdrop-blur-sm shadow">
     <h1 class="mb-6 text-2xl font-extrabold uppercase text-primary">Update Manager</h1>
     <form class="space-y-5 dark:text-white" [formGroup]="form" (ngSubmit)="onSubmit()">
       <div>
@@ -45,9 +45,123 @@
           </span>
         </div>
       </div>
-      <button type="submit" [disabled]="submitting || form.invalid" class="!mt-6 w-full rounded bg-red-600 px-4 py-2.5 text-center font-extrabold uppercase text-[#faac1b] shadow-sm transition-colors hover:bg-red-700 disabled:opacity-60">
+
+      <!-- Upload Documents -->
+      <div>
+        <h3 class="mb-4 text-lg font-semibold text-gray-800 dark:text-white">Upload Documents</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Agreement Upload -->
+          <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Agreement Upload</label>
+            <div class="relative">
+              <div *ngIf="!agreementPreview" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-200" (click)="agreementInput.click()">
+                <div class="flex flex-col items-center justify-center py-2">
+                  <icon-file class="w-8 h-8 mb-2 text-gray-400" />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    <span class="font-semibold">Click to upload</span><br>Agreement
+                  </p>
+                </div>
+              </div>
+              <div *ngIf="agreementPreview" class="relative w-full h-32 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-600 cursor-pointer" (click)="openModal('agreement')">
+                <button type="button" (click)="removeAgreement(); $event.stopPropagation()" class="absolute top-1 right-1 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                </button>
+                <div *ngIf="isPdf(agreementFileType)" class="w-full h-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                  <div class="text-center">
+                    <svg class="w-8 h-8 mx-auto mb-2 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+                    <p class="text-xs text-red-600 font-medium">PDF Document</p>
+                  </div>
+                </div>
+                <img *ngIf="!isPdf(agreementFileType)" [src]="fullSrc(agreementPreview)" alt="Agreement" class="w-full h-full object-cover" />
+              </div>
+              <input #agreementInput type="file" accept=".pdf,.doc,.docx,image/*" (change)="onAgreementSelect($event)" class="hidden" />
+            </div>
+          </div>
+
+          <!-- CNIC Upload -->
+          <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">CNIC</label>
+            <div class="relative">
+              <div *ngIf="!cnicPreview" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-200" (click)="cnicInput.click()">
+                <div class="flex flex-col items-center justify-center py-2">
+                  <icon-credit-card class="w-8 h-8 mb-2 text-gray-400" />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    <span class="font-semibold">Click to upload</span><br>CNIC
+                  </p>
+                </div>
+              </div>
+              <div *ngIf="cnicPreview" class="relative w-full h-32 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-600 cursor-pointer" (click)="openModal('cnic')">
+                <button type="button" (click)="removeCnic(); $event.stopPropagation()" class="absolute top-1 right-1 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                </button>
+                <img [src]="fullSrc(cnicPreview)" alt="CNIC" class="w-full h-full object-cover" />
+              </div>
+              <input id="Cnic" #cnicInput type="file" accept="image/*" (change)="onCnicSelect($event)" class="hidden" />
+            </div>
+          </div>
+
+          <!-- Profile Image Upload -->
+          <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Image</label>
+            <div class="relative">
+              <div *ngIf="!imagePreview" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-200" (click)="fileInput.click()">
+                <div class="flex flex-col items-center justify-center py-2">
+                  <icon-camera class="w-8 h-8 mb-2 text-gray-400" />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    <span class="font-semibold">Click to upload</span><br>Profile Image
+                  </p>
+                </div>
+              </div>
+              <div *ngIf="imagePreview" class="relative w-full h-32 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-600 cursor-pointer" (click)="openModal('image')">
+                <button type="button" (click)="removeImage(); $event.stopPropagation()" class="absolute top-1 right-1 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                </button>
+                <img [src]="fullSrc(imagePreview)" alt="Profile" class="w-full h-full object-cover" />
+              </div>
+              <input #fileInput type="file" accept="image/*" (change)="onImageSelect($event)" class="hidden" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label for="Role">Role</label>
+        <div class="relative text-white-dark">
+          <select id="Role" formControlName="role" class="form-select ps-4 placeholder:text-white-dark">
+            <option *ngFor="let r of roles" [ngValue]="r">{{ r }}</option>
+          </select>
+        </div>
+        <div class="mt-1 text-xs text-white-dark">Default is Manager as requested.</div>
+      </div>
+
+      <button type="submit" [disabled]="submitting || form.invalid" class="btn !mt-6 w-full border-0 uppercase bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-400 disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_10px_20px_-10px_rgba(239,68,68,0.44)]">
         Update Manager
       </button>
     </form>
+  </div>
+</div>
+
+<!-- Modal for viewing images and PDFs -->
+<div *ngIf="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" (click)="closeModal()">
+  <div class="relative max-w-4xl max-h-[90vh] w-full mx-4" (click)="$event.stopPropagation()">
+    <button type="button" (click)="closeModal()" class="absolute top-4 right-4 z-10 w-10 h-10 bg-white text-gray-800 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg">
+      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+    </button>
+    <div class="bg-white rounded-lg overflow-hidden shadow-2xl">
+      <div *ngIf="modalType === 'image'" class="flex items-center justify-center p-4">
+        <img [src]="fullSrc(modalContent)" alt="Preview" class="max-w-full max-h-[80vh] object-contain" />
+      </div>
+      <div *ngIf="modalType === 'pdf'" class="p-4">
+        <div class="text-center py-8">
+          <svg class="w-16 h-16 mx-auto mb-4 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">PDF Document</h3>
+          <p class="text-gray-600 mb-4">PDF preview is not available in this view.</p>
+          <a [href]="fullSrc(modalContent)" download class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+            Download PDF
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

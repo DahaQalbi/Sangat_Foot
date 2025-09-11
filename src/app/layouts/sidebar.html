@@ -53,6 +53,17 @@
                             </ul>
                         </div>
                     </li>
+                    <li class="menu nav-item">
+                        <a routerLink="/orders/add" class="nav-link group" routerLinkActive="active" (click)="toggleMobileMenu()">
+                            <div class="flex items-center">
+                                <icon-shopping-cart class="shrink-0 group-hover:!text-primary" />
+
+                                <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">
+                                    POS
+                                </span>
+                            </div>
+                        </a>
+                    </li>
                     <li class="accordion menu nav-item">
                         <button
                             type="button"
@@ -73,9 +84,6 @@
                         </button>
                         <div [@slideDownUp]="!activeDropdown.includes('orders')" class="accordion-content">
                             <ul class="sub-menu text-gray-500">
-                                <li>
-                                    <a routerLink="/orders/add" routerLinkActive="active" (click)="toggleMobileMenu()">Add Order</a>
-                                </li>
                                 <li *ngIf="!isWaiter">
                                     <a routerLink="/orders/list" routerLinkActive="active" (click)="toggleMobileMenu()">All Orders</a>
                                 </li>
@@ -89,34 +97,13 @@
                         </div>
                     </li>
 
-                    <li class="accordion menu nav-item" *ngIf="isAdmin">
-                        <button
-                            type="button"
-                            class="nav-link group w-full"
-                            [ngClass]="{ active: activeDropdown.includes('employees') }"
-                            (click)="toggleAccordion('employees')"
-                        >
+                    <li class="menu nav-item" *ngIf="isAdmin">
+                        <a routerLink="/users/all-staff" class="nav-link group" routerLinkActive="active" (click)="toggleMobileMenu()">
                             <div class="flex items-center">
                                 <icon-menu-contacts class="shrink-0 group-hover:!text-primary" />
-
-                                <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">
-                                    Staff 
-                                </span>
+                                <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">Staff</span>
                             </div>
-                            <div [ngClass]="{ 'rtl:rotate-90 -rotate-90': !activeDropdown.includes('employees') }">
-                                <icon-caret-down />
-                            </div>
-                        </button>
-                        <div [@slideDownUp]="!activeDropdown.includes('employees')" class="accordion-content">
-                            <ul class="sub-menu text-gray-500">
-                                <li>
-                                    <a routerLink="/users/all-manager" routerLinkActive="active" (click)="toggleMobileMenu()">All Manager</a>
-                                </li>
-                                <li>
-                                    <a routerLink="/users/all-waiters" routerLinkActive="active" (click)="toggleMobileMenu()">All Waiters</a>
-                                </li>
-                            </ul>
-                        </div>
+                        </a>
                     </li>
                     <li class="accordion menu nav-item" *ngIf="isAdmin">
                         <button

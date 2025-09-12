@@ -1,6 +1,9 @@
 import { Component } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { toggleAnimation } from 'src/app/shared/animations';
+import { OrderService } from 'src/app/services/order.service';
+import { Router } from '@angular/router';
+import { OrderStatus } from './orders/order-status.enum';
 
 @Component({
     templateUrl: './index.html',
@@ -12,10 +15,44 @@ export class IndexComponent {
     salesByCategory: any;
     dailySales: any;
     totalOrders: any;
+    monthlySales: any;
+    topSellingToday: Array<{ rank: number; name: string; qty: number; amount: number; image?: string }>= [];
     isLoading = true;
-    constructor(public storeData: Store<any>) {
+
+    // Dashboard mock data for the new design
+    now = new Date();
+    stats = {
+        todayOrders: 6,
+        todayEarnings: 6736,
+        todayCustomers: 5,
+        avgDailyEarnings: 1088.58,
+        salesThisMonth: 13063,
+    };
+
+    // Shape compatible with All Orders card markup
+    ordersToday: Array<{
+        tableNo: string;
+        customer: string;
+        id: number;
+        orderType: string;
+        status: string;
+        created: Date;
+        itemsCount: number;
+        total: number;
+        waiter?: string;
+    }> = [];
+    constructor(public storeData: Store<any>, private orderService: OrderService, private router: Router) {
         this.initStore();
         this.isLoading = false;
+        this.fetchDashboardOrders();
+        // mock top-selling list
+        this.topSellingToday = [
+            { rank: 1, name: 'Hyderabadi Chicken Biryani', qty: 5, amount: 1500 },
+            { rank: 2, name: 'Chilli Paneer', qty: 5, amount: 1200 },
+            { rank: 3, name: 'Chicken Manchurian', qty: 4, amount: 1040 },
+            { rank: 4, name: 'Paneer Tikka', qty: 3, amount: 750 },
+            { rank: 5, name: 'Uttapam', qty: 5, amount: 650 },
+        ];
     }
 
     async initStore() {
@@ -405,5 +442,133 @@ export class IndexComponent {
                 },
             ],
         };
+
+        // monthly sales (area) for the Sales This Month card
+        this.monthlySales = {
+            chart: {
+                height: 260,
+                type: 'area',
+                fontFamily: 'Nunito, sans-serif',
+                toolbar: { show: false },
+                sparkline: { enabled: false },
+            },
+            series: [
+                {
+                    name: 'Sales',
+                    data: [2300, 5000, 7000],
+                },
+            ],
+            colors: ['#8b5cf6'], // purple-500
+            stroke: {
+                curve: 'smooth',
+                width: 4,
+            },
+            markers: {
+                size: 4,
+                colors: ['#8b5cf6'],
+                strokeWidth: 0,
+                discrete: [
+                    {
+                        seriesIndex: 0,
+                        dataPointIndex: 2,
+                        fillColor: '#8b5cf6',
+                        size: 6,
+                    },
+                ],
+            },
+            dataLabels: { enabled: false },
+            grid: {
+                borderColor: isDark ? '#191e3a' : '#f3f4f6',
+                strokeDashArray: 4,
+                yaxis: { lines: { show: true } },
+                xaxis: { lines: { show: false } },
+            },
+            xaxis: {
+                categories: ['10 Sep', '11 Sep', '12 Sep'],
+                axisBorder: { show: false },
+                axisTicks: { show: false },
+                labels: {
+                    style: { fontSize: '12px' },
+                },
+            },
+            yaxis: {
+                labels: {
+                    formatter: (val: number) => `$${val.toFixed(0)}`,
+                    style: { fontSize: '12px' },
+                },
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: 'light',
+                    type: 'vertical',
+                    shadeIntensity: 0.9,
+                    gradientToColors: ['#a78bfa'], // lighter purple
+                    inverseColors: false,
+                    opacityFrom: 0.55,
+                    opacityTo: 0.08,
+                    stops: [0, 80, 100],
+                },
+            },
+            tooltip: {
+                x: { show: true },
+                y: { formatter: (val: number) => `$${val.toFixed(2)}` },
+            },
+        };
+    }
+
+    // Navigate to Orders List page
+    goToAllOrders() {
+        this.router.navigate(['/orders/list']);
+    }
+
+    // Fetch first 3 orders for dashboard using same mapping as Orders list
+    fetchDashboardOrders() {
+        this.orderService.getAllOrders().subscribe({
+            next: (res: any) => {
+                const data = Array.isArray(res) ? res : (res?.data || res?.orders || []);
+                const mapped = (data || []).map((o: any, idx: number) => this.toCard(o, idx));
+                // Exclude Completed & Paid like Orders page
+                const filtered = mapped.filter((o: any) => o.status !== OrderStatus.Completed && o.status !== OrderStatus.Paid);
+                this.ordersToday = filtered.slice(0, 3);
+            },
+            error: () => {
+                this.ordersToday = [];
+            },
+        });
+    }
+
+    // Map raw order to card shape (mirrors OrdersListComponent logic)
+    private toCard(o: any, idx: number) {
+        const created = o?.created_at || o?.createdAt || o?.orderDate || new Date().toISOString();
+        const total = Number(o?.sale ?? o?.total ?? o?.totalsale ?? 0) || 0;
+        const itemsCount = Array.isArray(o?.items)
+            ? o.items.length
+            : Array.isArray(o?.orderDetails)
+            ? o.orderDetails.length
+            : (o?.items_count || 0);
+        // normalize order type
+        const rawType = (o?.orderType ?? o?.delivery_type ?? o?.type ?? '').toString().toLowerCase();
+        const orderType = rawType === 'delivery' ? 'delivery' : 'dine-in';
+        return {
+            id: (o?.id ?? o?._id ?? idx) as number,
+            tableNo: o?.tableNo || o?.table || o?.table_number || 'T-?',
+            status: this.normalizeStatus(o?.status),
+            total,
+            itemsCount,
+            created: new Date(created),
+            customer: o?.customerName || o?.customer || 'Guest',
+            waiter: o?.waiterName || o?.waiter || '—',
+            orderType,
+        };
+    }
+
+    private normalizeStatus(val: any): any /* OrderStatus */ {
+        const s = String(val || '').toLowerCase();
+        if (s === 'cooking' || s === 'cook' || s === 'cokking') return OrderStatus.Cooking;
+        if (s === 'completed' || s === 'complete' || s === 'done') return OrderStatus.Completed;
+        if (s === 'paid' || s === 'pay' || s === 'payment') return OrderStatus.Paid;
+        if (s === 'cancel' || s === 'cancell' || s === 'cancelled' || s === 'canceled') return OrderStatus.Cancel;
+        return OrderStatus.Pending;
     }
 }

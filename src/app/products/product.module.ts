@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Routes, RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 import { SharedModule } from 'src/shared.module';
 import { AddCategoryComponent } from './add-category';
@@ -24,7 +25,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  imports: [RouterModule.forChild(routes), CommonModule, FormsModule, ReactiveFormsModule, SharedModule.forRoot()],
+  imports: [RouterModule.forChild(routes), CommonModule, FormsModule, ReactiveFormsModule, SharedModule.forRoot(), DragDropModule],
   declarations: [AddCategoryComponent, CategoriesListComponent, AddProductComponent, SizeTypeRowComponent, AllProductsComponent, AddDealComponent, AllDealsComponent],
   exports: [SizeTypeRowComponent],
 })

@@ -3,6 +3,7 @@ import { ProductService } from 'src/app/services/product.service';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { ToastService } from 'src/app/services/toast.service';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 @Component({
   templateUrl: './categories-list.html',
@@ -34,6 +35,14 @@ export class CategoriesListComponent implements OnInit {
         this.error = err?.error?.message || 'Failed to load categories';
       },
     });
+  }
+
+  // Drag & drop handler to reorder categories locally
+  drop(event: CdkDragDrop<any[]>) {
+    if (!this.categories || this.categories.length === 0) return;
+    if (event.previousIndex === event.currentIndex) return;
+    // Local-only reorder (no API call)
+    moveItemInArray(this.categories, event.previousIndex, event.currentIndex);
   }
 
   goToAdd() {

@@ -52,6 +52,35 @@ export class ManagersListComponent implements OnInit {
     this.buildAddForm();
   }
 
+  // Determine if a role value represents Admin (supports enum or string)
+  isAdminRole(val: any): boolean {
+    try {
+      if (val === Role.Admin) return true;
+      const s = String(val || '').toLowerCase();
+      return s === 'admin' || s.includes('admin');
+    } catch {
+      return false;
+    }
+  }
+
+  // Map role enum or string to readable label for template
+  roleLabel(val: any): string {
+    try {
+      if (val === null || val === undefined) return '—';
+      // If enum value
+      if (val === Role.Manager) return 'Manager';
+      if (val === Role.Waiter) return 'Waiter';
+      // If string
+      const s = String(val).toLowerCase();
+      if (s.includes('manager')) return 'Manager';
+      if (s.includes('waiter')) return 'Waiter';
+      // Fallback capitalize
+      return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
+    } catch {
+      return '—';
+    }
+  }
+
   private getExtension(path: string): string | null {
     try {
       const lower = String(path).toLowerCase();

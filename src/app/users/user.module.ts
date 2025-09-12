@@ -16,6 +16,8 @@ import { UpdateManagerComponent } from './update-manager';
 import { UpdateWaiterComponent } from './update-waiter';
 import { RoleGuard } from 'src/app/guards/role.guard';
 import { Role } from 'src/app/enums/role.enum';
+import { DeliveryExecutiveComponent } from './delivery-executive';
+import { DeliveryExeciveComponent } from './delivery-execive';
 
 const routes: Routes = [
     {
@@ -31,10 +33,12 @@ const routes: Routes = [
     { path: 'users/all-waiters', component: AllWaitersComponent, canActivate: [RoleGuard], data: { title: 'All Waiters', roles: [Role.Admin] } },
     { path: 'users/update-manager', component: UpdateManagerComponent, canActivate: [RoleGuard], data: { title: 'Update Manager', roles: [Role.Admin] } },
     { path: 'users/update-waiter', component: UpdateWaiterComponent, canActivate: [RoleGuard], data: { title: 'Update Waiter', roles: [Role.Admin] } },
+    { path: 'users/delivery-executive', component: DeliveryExecutiveComponent, canActivate: [RoleGuard], data: { title: 'Delivery Executive', roles: [Role.Admin] } },
+    { path: 'users/delivery-execive', component: DeliveryExeciveComponent, canActivate: [RoleGuard], data: { title: 'Delivery Execive', roles: [Role.Admin] } },
 ];
 
 @NgModule({
     imports: [RouterModule.forChild(routes), CommonModule, ReactiveFormsModule, SharedModule.forRoot()],
-    declarations: [UserAccountSettingsComponent, ProfileComponent, AddEmployeeComponent, AddStaffComponent, ManagersListComponent, AllWaitersComponent, UpdateManagerComponent, UpdateWaiterComponent],
+    declarations: [UserAccountSettingsComponent, ProfileComponent, AddEmployeeComponent, AddStaffComponent, ManagersListComponent, AllWaitersComponent, UpdateManagerComponent, UpdateWaiterComponent, DeliveryExecutiveComponent, DeliveryExeciveComponent],
 })
 export class UsersModule {}

@@ -246,10 +246,11 @@ export class AllWaitersComponent implements OnInit {
       return;
     }
     const { id, name, email, phone, password } = this.updateForm.value;
-    const payload: any = { id, name, email, phone };
+    const payload: any = { id, name, email, phone, role: 'waiter' };
     if (password) payload.password = password;
     this.updating = true;
-    this.staffService.updateWaiter(payload).subscribe({
+    // Use updateManager endpoint for waiter updates per requirement
+    this.staffService.updateManager(payload).subscribe({
       next: (resp) => {
         this.updating = false;
         if ((resp as any)?.error === true) {

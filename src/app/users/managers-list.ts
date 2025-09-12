@@ -52,6 +52,16 @@ export class ManagersListComponent implements OnInit {
     this.buildAddForm();
   }
 
+  private isWaiter(val: any): boolean {
+    try {
+      if (val === Role.Waiter) return true;
+      const s = String(val || '').toLowerCase();
+      return s.includes('waiter');
+    } catch {
+      return false;
+    }
+  }
+
   // Determine if a role value represents Admin (supports enum or string)
   isAdminRole(val: any): boolean {
     try {
@@ -475,11 +485,12 @@ export class ManagersListComponent implements OnInit {
     this.error = null;
     this.staffService.getManagers().subscribe({
       next: async (list: ManagerItem[]) => {
-        this.managers = list || [];
+        const onlyManagers = (list || []).filter((m: any) => !this.isWaiter(m?.role));
+        this.managers = onlyManagers;
         this.loading = false;
         try {
           await this.idb.clearStore('managers');
-          await this.idb.putAll('managers', this.managers as any[]);
+          await this.idb.putAll('managers', onlyManagers as any[]);
         } catch (e) {
           // eslint-disable-next-line no-console
           console.warn('Failed to update managers cache', e);

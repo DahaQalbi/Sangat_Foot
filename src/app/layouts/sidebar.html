@@ -78,6 +78,15 @@
                             </div>
                         </a>
                     </li>
+                    <!-- New: Delivery Execive tab -->
+                    <li class="menu nav-item" *ngIf="isAdmin">
+                        <a routerLink="/users/delivery-execive" class="nav-link group" routerLinkActive="active" (click)="toggleMobileMenu()">
+                            <div class="flex items-center">
+                                <icon-menu-contacts class="shrink-0 group-hover:!text-primary" />
+                                <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">Delivery Execive</span>
+                            </div>
+                        </a>
+                    </li>
                     <li class="accordion menu nav-item" *ngIf="isAdmin">
                         <button
                             type="button"

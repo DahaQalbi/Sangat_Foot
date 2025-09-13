@@ -24,6 +24,7 @@ export class AddOrderComponent {
   selectedCategory = 'All';
   categoryCounts: Record<string, number> = {};
   imgUrl: string = environment.imgUrl;
+  fallbackImg: string = '/assets/images/product-camera.jpg';
 
   // selected items: key by productId or id
   selected: Map<string | number, { product: any; qty: number }> = new Map();
@@ -71,6 +72,23 @@ export class AddOrderComponent {
     this.initLoad();
   }
 
+  // Improve ngFor performance to avoid unnecessary image rerenders
+  trackByProductId(index: number, p: any): string | number {
+    return p?.productId ?? p?.id ?? index;
+  }
+
+  // Fallback image handler
+  onImgError(evt: Event): void {
+    const img = evt.target as HTMLImageElement;
+    if (!img) return;
+    // Prevent infinite loop if fallback also 404s
+    if (img.dataset['fallbackApplied'] === '1') return;
+    img.dataset['fallbackApplied'] = '1';
+    img.src = this.fallbackImg;
+    img.loading = 'lazy';
+    img.decoding = 'async' as any;
+  }
+
   // Load products from cache, then API in background
   private async initLoad() {
     await this.loadFromCache();
@@ -90,18 +108,32 @@ export class AddOrderComponent {
   }
 
   private fetchProducts() {
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
     if (!this.products.length) this.loading = true;
+    if (!online) {
+      // Offline: rely on cache from loadFromCache(); do not call API
+      this.loading = false;
+      if (!this.products.length) this.error = 'Offline: showing cached products';
+      return;
+    }
     this.productService.getAllProducts().subscribe({
       next: async (res) => {
         const data = Array.isArray(res) ? res : (res?.data || res?.products || []);
         this.products = data || [];
         this.computeCategories();
         try {
+          // Save fresh copy to IndexedDB for offline use
           await this.idb.replaceAll('products', this.normalizedProductsForCache());
         } catch {}
         this.loading = false;
       },
-      error: () => {
+      error: async () => {
+        // If API fails while online, fallback to cache
+        try {
+          const cached = await this.idb.getAll<any>('products');
+          this.products = cached || [];
+          this.computeCategories();
+        } catch {}
         this.loading = false;
         this.error = 'Failed to load products';
       },

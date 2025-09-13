@@ -7,6 +7,8 @@ import { ToastService } from 'src/app/services/toast.service';
 import { Router } from '@angular/router';
 import { Role } from 'src/app/enums/role.enum';
 import { environment } from 'src/environments/environment';
+import { StaffSyncService } from 'src/app/services/staff-sync.service';
+import { IdbService } from 'src/app/services/idb.service';
 
 @Component({
   selector: 'app-update-manager',
@@ -17,7 +19,7 @@ export class UpdateManagerComponent implements OnInit {
   form!: FormGroup;
   submitting = false;
   manager: ManagerItem | null = null;
-  roles = [Role.Manager, Role.Waiter];
+  roles = [Role.Admin, Role.Manager, Role.Waiter, Role.Rider, Role.Cook, Role.Consumer];
   showPassword = false;
 
   // File handling (same as AddEmployee)
@@ -40,6 +42,8 @@ export class UpdateManagerComponent implements OnInit {
     private staffService: StaffService,
     private toast: ToastService,
     private router: Router,
+    private staffSync: StaffSyncService,
+    private idb: IdbService,
   ) {
     this.buildForm();
   }
@@ -108,16 +112,38 @@ export class UpdateManagerComponent implements OnInit {
     }
     // Same payload shape as AddEmployee, plus id
     const payload: any = { id: this.manager.id, ...this.form.value };
+    const applyLocal = async () => {
+      try {
+        const existing = await this.idb.getByKey<any>('managers', payload.id);
+        await this.idb.putAll('managers', [{ ...(existing || {}), ...payload }]);
+      } catch {}
+    };
+
+    // Offline: queue update and update cache
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.staffSync.queueUpdate({ ...payload, role: String(payload.role || Role.Manager).toLowerCase() }).then(() => this.staffSync.trySync());
+      applyLocal();
+      this.toast.success('Saved update offline. Will sync when online.');
+      this.router.navigate(['/users/all-manager']);
+      return;
+    }
 
     this.submitting = true;
-    this.staffService.updateManager(payload).subscribe({
+    this.staffService.updateManager({ ...payload, role: String(payload.role || Role.Manager).toLowerCase() }).subscribe({
       next: () => {
         this.submitting = false;
         this.toast.success('Manager updated successfully');
         this.router.navigate(['/users/all-manager']);
       },
-      error: (err) => {
+      error: async (err) => {
         this.submitting = false;
+        if (!err || err.status === 0) {
+          await this.staffSync.queueUpdate({ ...payload, role: String(payload.role || Role.Manager).toLowerCase() });
+          await applyLocal();
+          this.toast.success('No internet. Update saved offline and will sync later.');
+          this.router.navigate(['/users/all-manager']);
+          return;
+        }
         const msg = err?.error?.message || 'Failed to update manager';
         this.toast.error(msg);
       },

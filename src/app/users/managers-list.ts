@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { toggleAnimation } from 'src/app/shared/animations';
 import { environment } from 'src/environments/environment';
 import { StaffService } from 'src/app/services/staff.service';
+import { StaffSyncService } from 'src/app/services/staff-sync.service';
 import { Role } from 'src/app/enums/role.enum';
 import { ManagerItem } from 'src/app/interfaces/staff.interface';
 import { Router } from '@angular/router';
@@ -18,14 +19,16 @@ export class ManagersListComponent implements OnInit {
   loading = false;
   error: string | null = null;
   managers: ManagerItem[] = [];
+  // search term
+  search = '';
   // Sidebar modal state
   showSidebar = false;
-  selectedManager: ManagerItem | null = null;
+  selectedManager: any | null = null;
   // Add Member Sidebar state
   showAddSidebar = false;
   addForm!: FormGroup;
   submitting = false;
-  roles = [Role.Manager, Role.Waiter];
+  roles = [Role.Admin, Role.Manager, Role.Waiter, Role.Rider, Role.Cook, Role.Consumer];
   // Edit Member Sidebar state
   showUpdateSidebar = false;
   editForm!: FormGroup;
@@ -47,16 +50,35 @@ export class ManagersListComponent implements OnInit {
     private router: Router,
     private toast: ToastService,
     private idb: IdbService,
+    private staffSync: StaffSyncService,
   ) {
     // Ensure form exists ASAP so template bindings never see undefined
     this.buildAddForm();
   }
 
+  // Filtered view for template
+  get filteredManagers(): ManagerItem[] {
+    const term = (this.search || '').toLowerCase().trim();
+    if (!term) return this.managers || [];
+    return (this.managers || []).filter((m: any) => {
+      const name = (m?.name || '').toString().toLowerCase();
+      const email = (m?.email || '').toString().toLowerCase();
+      const phone = (m?.phone || '').toString().toLowerCase();
+      const role = this.roleLabel(m?.role || '').toString().toLowerCase();
+      return name.includes(term) || email.includes(term) || phone.includes(term) || role.includes(term);
+    });
+  }
+
+  trackByManagerId(index: number, m: any): string | number {
+    return m?.id ?? index;
+  }
+
+  // Predicate used to EXCLUDE riders from managers list
   private isWaiter(val: any): boolean {
     try {
-      if (val === Role.Waiter) return true;
+      if (val === Role.Rider) return true;
       const s = String(val || '').toLowerCase();
-      return s.includes('waiter');
+      return s.includes('rider');
     } catch {
       return false;
     }
@@ -78,12 +100,20 @@ export class ManagersListComponent implements OnInit {
     try {
       if (val === null || val === undefined) return '—';
       // If enum value
+      if (val === Role.Admin) return 'Admin';
       if (val === Role.Manager) return 'Manager';
       if (val === Role.Waiter) return 'Waiter';
+      if (val === Role.Rider) return 'Rider';
+      if (val === Role.Cook) return 'Cook';
+      if (val === Role.Consumer) return 'Consumers';
       // If string
       const s = String(val).toLowerCase();
+      if (s.includes('admin')) return 'Admin';
       if (s.includes('manager')) return 'Manager';
       if (s.includes('waiter')) return 'Waiter';
+      if (s.includes('rider')) return 'Rider';
+      if (s.includes('cook')) return 'Cook';
+      if (s.includes('consumer')) return 'Consumers';
       // Fallback capitalize
       return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
     } catch {
@@ -102,7 +132,7 @@ export class ManagersListComponent implements OnInit {
     }
   }
 
-  private fullUrl(path?: string | null): string | null {
+  public fullUrl(path?: string | null): string | null {
     const base = (environment as any)?.imgUrl || (environment as any)?.baseUrl || '';
     if (!path) return null;
     // Avoid double prefix if already starts with http
@@ -284,6 +314,28 @@ export class ManagersListComponent implements OnInit {
     };
     if (password) payload.password = password;
 
+    // Update local cache and list helper
+    const applyLocalUpdate = async () => {
+      try {
+        // Update in-memory list
+        this.managers = (this.managers || []).map((m: any) => (m.id === id ? { ...m, name, email, phone, role: roleStr, image, cnic, agrement } : m));
+        // Update IndexedDB record
+        const existing = await this.idb.getByKey<any>('managers', id);
+        const updated = { ...(existing || {}), id, name, email, phone, role: roleStr, image, cnic, agrement };
+        await this.idb.putAll('managers', [updated]);
+      } catch {}
+    };
+
+    // Offline: queue update and apply locally
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.staffSync.queueUpdate(payload).then(() => this.staffSync.trySync());
+      applyLocalUpdate();
+      this.toast.success('Saved update offline. Will sync when online.');
+      this.closeUpdateSidebar();
+      this.clearEditUploads();
+      return;
+    }
+
     this.updating = true;
     this.staffService.updateManager(payload).subscribe({
       next: (resp: any) => {
@@ -297,8 +349,16 @@ export class ManagersListComponent implements OnInit {
         this.fetchManagers();
         this.clearEditUploads();
       },
-      error: (err) => {
+      error: async (err) => {
         this.updating = false;
+        if (!err || err.status === 0) {
+          await this.staffSync.queueUpdate(payload);
+          await applyLocalUpdate();
+          this.toast.success('No internet. Update saved offline and will sync later.');
+          this.closeUpdateSidebar();
+          this.clearEditUploads();
+          return;
+        }
         const msg = err?.error?.message || 'Failed to update member';
         this.toast.error(msg);
       },
@@ -333,6 +393,8 @@ export class ManagersListComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadFromCache();
+    // Attempt to sync any pending staff records when page opens
+    await this.staffSync.trySync();
     this.fetchManagers();
   }
 
@@ -349,11 +411,20 @@ export class ManagersListComponent implements OnInit {
 
   // Add Member sidebar controls
   openAddSidebar(): void {
-    // Toggle to true explicitly to open
+    // Clear any stale upload state before opening
+    this.agreementPreview = null;
+    this.imagePreview = null;
+    this.cnicPreview = null;
+    this.selectedImageBase64 = '';
+    this.selectedAgreementBase64 = '';
+    this.selectedCnicBase64 = '';
+    this.imageFileType = '';
+    this.agreementFileType = '';
+    this.cnicFileType = '';
+    // Reset related form controls so fields are empty when sidebar opens
+    this.addForm?.patchValue({ image: null, agreement: null, cnic: '' });
+    // Now open sidebar
     this.showAddSidebar = true;
-    // Debug: verify click handler triggers
-    // eslint-disable-next-line no-console
-    console.log('[ManagersList] openAddSidebar ->', this.showAddSidebar);
   }
 
   closeAddSidebar(): void {
@@ -398,27 +469,65 @@ export class ManagersListComponent implements OnInit {
     const image: string | null = this.selectedImageBase64 || this.addForm.value?.image || null;
     const cnic: string | null = this.selectedCnicBase64 || this.addForm.value?.cnic || null;
 
-    const roleStr = role === Role.Manager ? 'manager' : 'waiter';
+    const roleStr = String(role || '').toLowerCase();
     const basePayload: any = { name, password, phone, role: roleStr, email, image, cnic, agrement, extention };
+
+    // Helper to update UI and cache immediately
+    const appendLocally = async () => {
+      const created: any = {
+        id: Date.now(),
+        name,
+        email,
+        phone,
+        role: roleStr,
+        image,
+        cnic,
+        agrement,
+        extention,
+      };
+      // Append to in-memory list (exclude riders per page filter logic happens in fetch)
+      this.managers = [created, ...this.managers];
+      try {
+        await this.idb.putAll('managers', [created]);
+      } catch {
+        // ignore cache write errors
+      }
+    };
+
+    // If offline, queue and update locally without calling API
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.staffSync.queueStaff(basePayload).then(() => this.staffSync.trySync());
+      appendLocally();
+      this.toast.success('Saved offline. Will sync when online.');
+      this.closeAddSidebar();
+      return;
+    }
+
     this.submitting = true;
-   
-      this.staffService.addManage(basePayload).subscribe({
-        next: () => {
-          this.submitting = false;
-          this.removeAddCnic();
-          this.removeAddImage();
-          this.removeAddAgreement();
-          this.toast.success('Staff added successfully');
+    this.staffService.addManage(basePayload).subscribe({
+      next: () => {
+        this.submitting = false;
+        this.removeAddCnic();
+        this.removeAddImage();
+        this.removeAddAgreement();
+        this.toast.success('Staff added successfully');
+        this.closeAddSidebar();
+        this.fetchManagers();
+      },
+      error: async (err) => {
+        this.submitting = false;
+        // Network error -> queue offline and update locally
+        if (!err || err.status === 0) {
+          await this.staffSync.queueStaff(basePayload);
+          await appendLocally();
+          this.toast.success('No internet. Saved offline and will sync later.');
           this.closeAddSidebar();
-          this.fetchManagers();
-        },
-        error: (err) => {
-          this.submitting = false;
-          const msg = err?.error?.message || 'Failed to add manager';
-          this.toast.error(msg);
-        },
-      });
-   
+          return;
+        }
+        const msg = err?.error?.message || 'Failed to add manager';
+        this.toast.error(msg);
+      },
+    });
   }
 
   // ---- File handlers for Add Member ----
@@ -480,7 +589,23 @@ export class ManagersListComponent implements OnInit {
   }
 
   fetchManagers(): void {
-    // Background refresh if cache already filled
+    // If offline, read from cache and do not call API
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.loading = true;
+      this.error = null;
+      this.idb.getAll<ManagerItem>('managers')
+        .then((cached) => {
+          this.managers = (cached || []) as any[];
+          this.loading = false;
+        })
+        .catch(() => {
+          this.loading = false;
+          this.error = 'Offline: no cached managers found';
+        });
+      return;
+    }
+
+    // Online: Background refresh if cache already filled
     if (!this.managers.length) this.loading = true;
     this.error = null;
     this.staffService.getManagers().subscribe({

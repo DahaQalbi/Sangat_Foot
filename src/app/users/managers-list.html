@@ -9,6 +9,16 @@
     <div *ngIf="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-transparent">{{ error }}</div>
 
     <div *ngIf="!loading && !error">
+      <!-- Search bar -->
+      <div class="mb-4 flex items-center gap-2">
+        <div class="relative w-full max-w-sm">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/></svg>
+          </span>
+          <input [(ngModel)]="search" [ngModelOptions]="{standalone:true}" type="text" class="form-input w-full pl-9" placeholder="Search by name, email, phone or role" />
+        </div>
+        <button type="button" class="btn btn-outline-primary" (click)="search=''">Clear</button>
+      </div>
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 rounded-md overflow-hidden shadow">
           <thead class="bg-gray-50 dark:bg-[#0e1726]">
@@ -23,7 +33,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-[#060b1b]">
-            <tr *ngFor="let m of managers" class="odd:bg-white even:bg-gray-50 hover:bg-gray-50 transition-colors dark:odd:bg-[#060b1b] dark:even:bg-[#0e1726] dark:hover:bg-[#0e1726]">
+            <tr *ngFor="let m of filteredManagers; trackBy: trackByManagerId" class="odd:bg-white even:bg-gray-50 hover:bg-gray-50 transition-colors dark:odd:bg-[#060b1b] dark:even:bg-[#0e1726] dark:hover:bg-[#0e1726]">
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-semibold">{{ m.name }}</td>
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ m.email }}</td>
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ m.phone || '-' }}</td>
@@ -57,7 +67,7 @@
                 </ng-template>
               </td>
             </tr>
-            <tr *ngIf="!managers.length">
+            <tr *ngIf="!filteredManagers.length">
               <td class="px-4 py-6 text-center text-gray-500" colspan="7">No staff found</td>
             </tr>
           </tbody>
@@ -350,7 +360,7 @@
   <div class="absolute inset-0 bg-black/50" (click)="closeSidebar()"></div>
   
   <!-- Sidebar -->
-  <div class="absolute right-0 top-0 h-full w-96 bg-white dark:bg-[#0e1726] shadow-xl transform transition-transform duration-300 ease-in-out">
+  <div class="absolute right-0 top-0 h-full w-96 bg-white dark:bg-[#0e1726] shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col">
     <!-- Header -->
     <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
       <h2 class="text-xl font-bold text-gray-900 dark:text-white">Staff Details</h2>
@@ -362,13 +372,18 @@
     </div>
 
     <!-- Content -->
-    <div class="p-6 overflow-y-auto h-full pb-24" *ngIf="selectedManager">
+    <div class="p-6 overflow-y-auto flex-1 pb-6" *ngIf="selectedManager">
       <!-- Profile Image -->
-      <div class="flex justify-end mb-6 relative">
+      <div class="flex justify-center mb-6 relative">
         <div class="w-20 h-20 bg-gray-300 dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
-          <svg class="w-12 h-12 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-          </svg>
+          <ng-container *ngIf="fullUrl(selectedManager?.image); else noProfile">
+            <img [src]="fullUrl(selectedManager?.image)" alt="Profile" class="w-full h-full object-cover" />
+          </ng-container>
+          <ng-template #noProfile>
+            <svg class="w-12 h-12 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+          </ng-template>
         </div>
         <div class="absolute top-1 right-1 w-4 h-4 bg-white dark:bg-gray-200 rounded-full"></div>
       </div>
@@ -391,36 +406,30 @@
           <span class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">Role:</span>
           <span class="text-sm text-gray-900 dark:text-white">{{ roleLabel(selectedManager.role) }}</span>
         </div>
-        <div class="flex">
+        <div class="flex items-center gap-2">
           <span class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">Agreement:</span>
-          <a href="#" class="text-sm text-blue-600 hover:text-blue-800 underline">Download Agreement</a>
+          <a [href]="fullUrl(selectedManager?.agrement)"
+             class="text-sm text-blue-600 hover:text-blue-800 underline"
+             target="_blank" rel="noopener noreferrer" download>
+            Download Agreement
+          </a>
         </div>
       </div>
 
-      <!-- ID Card Section (placeholder to mirror design) -->
+      <!-- ID Card Section -->
       <div class="mt-8">
         <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">ID CARD:</p>
-        <div class="w-full bg-gray-300 dark:bg-gray-700 rounded-xl p-6 flex items-center justify-center relative" style="height: 140px;">
-          <svg class="w-16 h-16 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-          </svg>
+        <div class="w-full bg-gray-300 dark:bg-gray-700 rounded-xl p-2 flex items-center justify-center relative" style="height: 180px;">
+          <ng-container *ngIf="fullUrl(selectedManager?.cnic); else noCnic">
+            <img [src]="fullUrl(selectedManager?.cnic)" alt="ID Card" class="w-full h-full object-contain rounded-md" />
+          </ng-container>
+          <ng-template #noCnic>
+            <svg class="w-16 h-16 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h14a2 2 0 012 2v3H3V5zm0 5h18v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6zm4 3h6v2H7v-2z"/>
+            </svg>
+          </ng-template>
           <div class="absolute top-3 right-3 w-6 h-6 bg-white dark:bg-gray-200 rounded-full"></div>
         </div>
-      </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="absolute bottom-0 left-0 right-0 p-6 bg-white dark:bg-[#0e1726] border-t border-gray-200 dark:border-gray-600">
-      <div class="flex gap-3">
-        <button (click)="selectedManager && onEdit(selectedManager)" class="flex-1 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-md font-medium transition-colors">
-          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-          </svg>
-          Update
-        </button>
-        <button (click)="closeSidebar()" class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-          Cancel
-        </button>
       </div>
     </div>
   </div>

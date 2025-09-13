@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { toggleAnimation } from 'src/app/shared/animations';
 import { StaffService } from 'src/app/services/staff.service';
+import { StaffSyncService } from 'src/app/services/staff-sync.service';
 import { AddManagePayload } from 'src/app/interfaces/staff.interface';
 import { Role } from 'src/app/enums/role.enum';
 import { ToastService } from 'src/app/services/toast.service';
@@ -16,7 +17,7 @@ import { environment } from 'src/environments/environment';
 export class AddEmployeeComponent {
   form!: FormGroup;
   submitting = false;
-  roles = [Role.Manager, Role.Waiter];
+  roles = [Role.Admin, Role.Manager, Role.Waiter, Role.Rider, Role.Cook, Role.Consumer];
   selectedImageBase64: string = '';
   selectedAgreementBase64: string = '';
   selectedCnicBase64: string = '';
@@ -36,6 +37,7 @@ public imgUrl=environment.imgUrl;
     private toast: ToastService,
     private router: Router,
     private idb: IdbService,
+    private staffSync: StaffSyncService,
   ) {
     this.buildForm();
   }
@@ -213,45 +215,56 @@ public imgUrl=environment.imgUrl;
     }
     const payload: AddManagePayload = this.form.value;
 
+    const goAfter = () => {
+      if(payload.role === Role.Waiter){
+        this.router.navigate(['/users/all-waiters']);
+      }else{
+        this.router.navigate(['/users/all-manager']);
+      }
+    };
+
+    // Offline path: queue and navigate immediately
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.staffSync.queueStaff({ ...payload, role: String(payload.role).toLowerCase() }).then(() => this.staffSync.trySync());
+      this.toast.success('Saved offline. Will sync when online.');
+      goAfter();
+      return;
+    }
+
     this.submitting = true;
-    this.staffService.addManage(payload).subscribe({
+    this.staffService.addManage({ ...payload, role: String(payload.role).toLowerCase() } as any).subscribe({
       next: async (res) => {
         this.submitting = false;
         this.toast.success('Employee added successfully');
         try {
-          // Prefer created entity from API response; fallback to submitted payload
           const created: any = (res && (res.data || res.user || res.created || res.result)) || {
             ...payload,
             id: Date.now(),
           };
-          // Ensure role is set on created record for downstream usage
           if (!created.role) created.role = payload.role;
-          // Ensure we always have an id (some APIs return uid or _id)
           if (!created.id) {
             created.id = created._id || created.uid || Date.now();
           }
-          // Normalize role string if backend returns lowercase
           if (typeof created.role === 'string') {
             const r = created.role.toLowerCase();
             if (r.includes('waiter')) created.role = Role.Waiter;
             else if (r.includes('manager')) created.role = Role.Manager;
           }
           const store = payload.role === Role.Waiter ? 'waiters' : 'managers';
-          // Append to IndexedDB store without clearing
           await this.idb.putAll(store, [created]);
         } catch (e) {
-          // ignore cache write failures
-          // eslint-disable-next-line no-console
           console.warn('Failed to cache new employee', e);
         }
-        if(payload.role === Role.Waiter){
-          this.router.navigate(['/users/all-waiters']);
-        }else{
-          this.router.navigate(['/users/all-manager']);
-        }
+        goAfter();
       },
-      error: (err) => {
+      error: async (err) => {
         this.submitting = false;
+        if (!err || err.status === 0) {
+          await this.staffSync.queueStaff({ ...payload, role: String(payload.role).toLowerCase() });
+          this.toast.success('No internet. Saved offline and will sync later.');
+          goAfter();
+          return;
+        }
         const msg = err?.error?.message || 'Failed to add employee';
         this.toast.error(msg);
       },

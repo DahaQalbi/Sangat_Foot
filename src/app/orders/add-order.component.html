@@ -34,9 +34,15 @@
   <!-- Product grid -->
   <div *ngIf="!loading && !error">
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      <div *ngFor="let p of filteredProducts" class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-[#0e1726]">
+      <div *ngFor="let p of filteredProducts; trackBy: trackByProductId" class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-[#0e1726]">
         <div class="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
-          <img [src]="imgUrl + p.image" alt="{{p.name}}" class="h-full w-full object-cover" />
+          <img [src]="imgUrl + p.image"
+               alt="{{p.name}}"
+               class="h-full w-full object-cover"
+               loading="lazy"
+               decoding="async"
+               fetchpriority="low"
+               (error)="onImgError($event)" />
           <button type="button" (click)="toggleSelect(p)"
                   class="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full border text-white shadow"
                   [ngClass]="isSelected(p) ? 'bg-red-600 border-red-600' : 'bg-gray-700/70 border-white/30'">

@@ -21,6 +21,10 @@ export interface ManagerItem {
   role: Role;
   create_at?: string; // ISO date string from backend
   created_at?: string; // ISO date string from backend
+  // optional media fields returned by backend
+  image?: string | null;     // relative or absolute path
+  cnic?: string | null;      // relative or absolute path
+  agrement?: string | null;  // relative or absolute path to PDF/image
 }
 
 export interface UpdateManagerPayload {

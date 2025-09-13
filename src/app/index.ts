@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { toggleAnimation } from 'src/app/shared/animations';
 import { OrderService } from 'src/app/services/order.service';
 import { Router } from '@angular/router';
 import { OrderStatus } from './orders/order-status.enum';
+import { FinanceService } from './services/finance.service';
 
 @Component({
     templateUrl: './index.html',
@@ -22,12 +23,16 @@ export class IndexComponent {
     // Dashboard mock data for the new design
     now = new Date();
     stats = {
-        todayOrders: 6,
-        todayEarnings: 6736,
-        todayCustomers: 5,
-        avgDailyEarnings: 1088.58,
-        salesThisMonth: 13063,
-    };
+        todayOrders: 0,
+        todayEarnings: 0,
+        todayCustomers: 0,
+        avgDailyEarnings: 0,
+        salesThisMonth: 0,
+        // computed deltas vs yesterday
+        todayOrdersDeltaPct: 0,
+        todayEarningsDeltaPct: 0,
+        todayCustomersDeltaPct: 0,
+    } as any;
 
     // Shape compatible with All Orders card markup
     ordersToday: Array<{
@@ -41,10 +46,13 @@ export class IndexComponent {
         total: number;
         waiter?: string;
     }> = [];
+    public financeService=inject(FinanceService);
+    finance: any;
     constructor(public storeData: Store<any>, private orderService: OrderService, private router: Router) {
         this.initStore();
         this.isLoading = false;
         this.fetchDashboardOrders();
+        this.getFinance();
         // mock top-selling list
         this.topSellingToday = [
             { rank: 1, name: 'Hyderabadi Chicken Biryani', qty: 5, amount: 1500 },
@@ -77,7 +85,86 @@ export class IndexComponent {
                 }
             });
     }
+public getFinance(){
+  this.financeService.getAllFinance().subscribe((res:any) => {
+    try {
+      const arr = Array.isArray(res) ? res : [];
+      const data = arr[0] || {};
+      this.finance = data;
 
+      const todays_orders = Number(data?.todays_orders || 0);
+      const yesterdays_orders = Number(data?.yesterdays_orders || 0);
+      const todays_profit = Number(data?.todays_profit || 0);
+      const yesterdays_profit = Number(data?.yesterdays_profit || 0);
+      const todays_customer = Number(data?.todays_customer || 0);
+      const yesterdays_customer = Number(data?.yesterdays_customer || 0);
+      const monthly_report = Array.isArray(data?.monthly_report) ? data.monthly_report : [];
+
+      // compute deltas safely
+      const pct = (today: number, yesterday: number) => {
+        if (!yesterday) return today ? 100 : 0; // avoid divide-by-zero
+        return ((today - yesterday) / yesterday) * 100;
+      };
+
+      // update stats used by the top cards
+      this.stats.todayOrders = todays_orders;
+      this.stats.todayEarnings = todays_profit;
+      this.stats.todayCustomers = todays_customer;
+      this.stats.todayOrdersDeltaPct = pct(todays_orders, yesterdays_orders);
+      this.stats.todayEarningsDeltaPct = pct(todays_profit, yesterdays_profit);
+      this.stats.todayCustomersDeltaPct = pct(todays_customer, yesterdays_customer);
+
+      // monthly totals from report
+      const categories = monthly_report.map((r: any) => {
+        const d = new Date(r?.order_date);
+        if (isNaN(d.getTime())) return String(r?.order_date || '');
+        const day = d.getDate();
+        const month = d.toLocaleString(undefined, { month: 'short' });
+        return `${day} ${month}`;
+      });
+      const salesSeries = monthly_report.map((r: any) => Number(r?.total_sale || 0));
+      const profitSeries = monthly_report.map((r: any) => Number(r?.profit || 0));
+      const totalSalesThisMonth = salesSeries.reduce((a: number, b: number) => a + b, 0);
+      this.stats.salesThisMonth = totalSalesThisMonth;
+      // average daily earnings (use profit average from monthly report)
+      const daysCount = profitSeries.length || 1;
+      const totalProfit = profitSeries.reduce((a: number, b: number) => a + b, 0);
+      this.stats.avgDailyEarnings = totalProfit / daysCount;
+
+      // Update the monthly sales chart (Sales This Month card)
+      if (this.monthlySales) {
+        this.monthlySales = {
+          ...this.monthlySales,
+          series: [
+            { name: 'Sales', data: salesSeries },
+            // optionally include profit as another line in the same chart
+            // { name: 'Profit', data: profitSeries },
+          ],
+          xaxis: {
+            ...this.monthlySales.xaxis,
+            categories,
+          }
+        };
+      } else {
+        this.monthlySales = {
+          chart: { height: 260, type: 'area', fontFamily: 'Nunito, sans-serif', toolbar: { show: false } },
+          series: [ { name: 'Sales', data: salesSeries } ],
+          colors: ['#8b5cf6'],
+          stroke: { curve: 'smooth', width: 4 },
+          markers: { size: 4, colors: ['#8b5cf6'], strokeWidth: 0 },
+          dataLabels: { enabled: false },
+          grid: { borderColor: '#f3f4f6', strokeDashArray: 4, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
+          xaxis: { categories },
+          yaxis: { labels: { formatter: (val: number) => `$${val.toFixed(0)}`, style: { fontSize: '12px' } } },
+          fill: { type: 'gradient', gradient: { shade: 'light', type: 'vertical', shadeIntensity: 0.9, gradientToColors: ['#a78bfa'], inverseColors: false, opacityFrom: 0.55, opacityTo: 0.08, stops: [0, 80, 100] } },
+          tooltip: { x: { show: true }, y: { formatter: (val: number) => `$${val.toFixed(2)}` } },
+        } as any;
+      }
+    } catch (e) {
+      console.error('Failed to map finance data', e);
+    }
+  });
+}
     initCharts() {
         const isDark = this.store.theme === 'dark' || this.store.isDarkMode ? true : false;
         const isRtl = this.store.rtlClass === 'rtl' ? true : false;

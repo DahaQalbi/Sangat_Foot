@@ -7,6 +7,8 @@ import { Router } from '@angular/router';
 import { ManagerItem } from 'src/app/interfaces/staff.interface';
 import { Role } from 'src/app/enums/role.enum';
 import { environment } from 'src/environments/environment';
+import { StaffSyncService } from 'src/app/services/staff-sync.service';
+import { IdbService } from 'src/app/services/idb.service';
 
 @Component({
   selector: 'app-update-waiter',
@@ -17,7 +19,7 @@ export class UpdateWaiterComponent implements OnInit {
   form!: FormGroup;
   submitting = false;
   waiter: ManagerItem | null = null;
-  roles = [Role.Manager, Role.Waiter];
+  roles = [Role.Admin, Role.Manager, Role.Waiter, Role.Rider, Role.Cook, Role.Consumer];
   showPassword = false;
 
   // File handling (same as AddEmployee)
@@ -40,6 +42,8 @@ export class UpdateWaiterComponent implements OnInit {
     private staffService: StaffService,
     private toast: ToastService,
     public router: Router,
+    private staffSync: StaffSyncService,
+    private idb: IdbService,
   ) {
     this.buildForm();
   }
@@ -105,15 +109,38 @@ export class UpdateWaiterComponent implements OnInit {
     // Same payload as AddEmployee, plus id
     const payload: any = { id: this.waiter.id as string | number, ...this.form.value };
 
+    const applyLocal = async () => {
+      try {
+        const existing = await this.idb.getByKey<any>('waiters', payload.id);
+        await this.idb.putAll('waiters', [{ ...(existing || {}), ...payload }]);
+      } catch {}
+    };
+
+    // Offline: queue update and update cache
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.staffSync.queueUpdate({ ...payload, role: 'waiter' }).then(() => this.staffSync.trySync());
+      applyLocal();
+      this.toast.success('Saved update offline. Will sync when online.');
+      this.router.navigate(['/users/all-waiters']);
+      return;
+    }
+
     this.submitting = true;
-    this.staffService.updateManager(payload).subscribe({
+    this.staffService.updateWaiter({ ...payload, role: 'waiter' }).subscribe({
       next: () => {
         this.submitting = false;
         this.toast.success('Waiter updated successfully');
         this.router.navigate(['/users/all-waiters']);
       },
-      error: (err) => {
+      error: async (err) => {
         this.submitting = false;
+        if (!err || err.status === 0) {
+          await this.staffSync.queueUpdate({ ...payload, role: 'waiter' });
+          await applyLocal();
+          this.toast.success('No internet. Update saved offline and will sync later.');
+          this.router.navigate(['/users/all-waiters']);
+          return;
+        }
         const msg = err?.error?.message || 'Failed to update waiter';
         this.toast.error(msg);
       },

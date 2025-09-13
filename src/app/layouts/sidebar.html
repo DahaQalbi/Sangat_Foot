@@ -15,7 +15,7 @@
                 </a>
             </div>
             <div class="relative block flex-1 overflow-y-auto overscroll-contain pr-1 pb-6">
-                <ul class="relative space-y-0.5 p-4 py-0 font-semibold">
+                <ul class="relative space-y-0.5 p-4 py-0 font-bold">
                     <li class="menu nav-item" *ngIf="isAdmin">
                         <a routerLink="/" class="nav-link group" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" (click)="toggleMobileMenu()">
                             <div class="flex items-center">
@@ -29,7 +29,19 @@
                     <li class="menu nav-item">
                         <a routerLink="/orders/add" class="nav-link group" routerLinkActive="active" (click)="toggleMobileMenu()">
                             <div class="flex items-center">
-                                <icon-shopping-cart class="shrink-0 group-hover:!text-primary" />
+                                <!-- POS terminal icon -->
+                                <svg class="shrink-0 h-5 w-5 text-gray-700 dark:text-[#506690] group-hover:!text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  <!-- Device body -->
+                                  <rect x="5" y="3" width="12" height="18" rx="2.5" ry="2.5" />
+                                  <!-- Screen -->
+                                  <rect x="7" y="5" width="8" height="5" rx="1" />
+                                  <!-- Keypad rows -->
+                                  <path d="M7.5 12.5h7" />
+                                  <path d="M7.5 15h7" />
+                                  <path d="M7.5 17.5h4.5" />
+                                  <!-- Side receipt module -->
+                                  <rect x="17.5" y="6" width="3" height="6" rx="0.8" />
+                                </svg>
 
                                 <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">
                                     POS
@@ -45,7 +57,15 @@
                             (click)="toggleAccordion('orders')"
                         >
                             <div class="flex items-center">
-                                <icon-shopping-cart class="shrink-0 group-hover:!text-primary" />
+                                <!-- Cloche (serving dish) icon -->
+                                <svg class="shrink-0 h-5 w-5 text-gray-700 dark:text-[#506690] group-hover:!text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  <!-- Dome -->
+                                  <path d="M4 14a8 8 0 0 1 16 0" />
+                                  <!-- Knob -->
+                                  <circle cx="12" cy="6" r="1.2" />
+                                  <!-- Base line -->
+                                  <path d="M3 18h18" />
+                                </svg>
 
                                 <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">
                                     Orders
@@ -73,7 +93,11 @@
                     <li class="menu nav-item" *ngIf="isAdmin">
                         <a routerLink="/users/all-staff" class="nav-link group" routerLinkActive="active" (click)="toggleMobileMenu()">
                             <div class="flex items-center">
-                                <icon-menu-contacts class="shrink-0 group-hover:!text-primary" />
+                                <!-- Staff (person) icon -->
+                                <svg class="shrink-0 h-5 w-5 text-gray-700 dark:text-[#506690] group-hover:!text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  <circle cx="12" cy="7" r="3" />
+                                  <path d="M5 20a7 7 0 0 1 14 0" />
+                                </svg>
                                 <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">Staff</span>
                             </div>
                         </a>
@@ -82,7 +106,18 @@
                     <li class="menu nav-item" *ngIf="isAdmin">
                         <a routerLink="/users/delivery-execive" class="nav-link group" routerLinkActive="active" (click)="toggleMobileMenu()">
                             <div class="flex items-center">
-                                <icon-menu-contacts class="shrink-0 group-hover:!text-primary" />
+                                <!-- Delivery Executive (rider) icon -->
+                                <svg class="shrink-0 h-5 w-5 text-gray-700 dark:text-[#506690] group-hover:!text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  <!-- Wheels -->
+                                  <circle cx="7" cy="18" r="2" />
+                                  <circle cx="17" cy="18" r="2" />
+                                  <!-- Rider body/head -->
+                                  <circle cx="12" cy="6" r="1.6" />
+                                  <path d="M11 7.8l-2 3.2 3 1.5 1.5 2.5" />
+                                  <!-- Bike frame / handle -->
+                                  <path d="M7 18l5-6 5 0" />
+                                  <path d="M17 12l2-2v4" />
+                                </svg>
                                 <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">Delivery Execive</span>
                             </div>
                         </a>
@@ -95,10 +130,20 @@
                             (click)="toggleAccordion('products')"
                         >
                             <div class="flex items-center">
-                                <icon-box class="shrink-0 group-hover:!text-primary" />
+                                <!-- Fork & Knife Menu Icon -->
+                                <svg class="shrink-0 h-5 w-5 text-gray-700 dark:text-[#506690] group-hover:!text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  <rect x="3" y="3" width="18" height="18" rx="2.5" ry="2.5"></rect>
+                                  <!-- Fork -->
+                                  <path d="M9 7v10"></path>
+                                  <path d="M7.5 7v4"></path>
+                                  <path d="M10.5 7v4"></path>
+                                  <!-- Knife -->
+                                  <path d="M15 7v10"></path>
+                                  <path d="M16.8 7c0 2.5-1.8 3.5-1.8 5.5V17"></path>
+                                </svg>
 
                                 <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">
-                                    Product
+                                    Menu
                                 </span>
                             </div>
                             <div [ngClass]="{ 'rtl:rotate-90 -rotate-90': !activeDropdown.includes('products') }">
@@ -108,13 +153,13 @@
                         <div [@slideDownUp]="!activeDropdown.includes('products')" class="accordion-content">
                             <ul class="sub-menu text-gray-500">
                                 <li>
-                                    <a routerLink="/products/categories" routerLinkActive="active" (click)="toggleMobileMenu()">Categories</a>
+                                    <a routerLink="/products/categories" routerLinkActive="active" (click)="toggleMobileMenu()">Menu Categories</a>
                                 </li>
                                 <li>
-                                    <a routerLink="/products/add-product" routerLinkActive="active" (click)="toggleMobileMenu()">Add Product</a>
+                                    <a routerLink="/products/add-product" routerLinkActive="active" (click)="toggleMobileMenu()">Add Menu</a>
                                 </li>
                                 <li>
-                                    <a routerLink="/products/all-products" routerLinkActive="active" (click)="toggleMobileMenu()">All Products</a>
+                                    <a routerLink="/products/all-products" routerLinkActive="active" (click)="toggleMobileMenu()">All Menus</a>
                                 </li>
                             </ul>
                         </div>

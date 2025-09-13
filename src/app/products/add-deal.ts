@@ -28,6 +28,19 @@ import { ToastService } from 'src/app/services/toast.service';
           <p class="mt-1 text-[11px] text-gray-500">Will be sent as YYYY-MM-DD HH:mm:ss</p>
         </div>
 
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="mb-1 block text-sm font-medium">Cost Price</label>
+            <input type="number" step="0.01" min="0" class="form-input w-full" formControlName="cost" placeholder="Auto from items if empty" />
+            <p class="mt-1 text-[11px] text-gray-500">Leave empty to auto-calculate from selected items.</p>
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium">Sale Price</label>
+            <input type="number" step="0.01" min="0" class="form-input w-full" formControlName="sale" placeholder="Auto from items if empty" />
+            <p class="mt-1 text-[11px] text-gray-500">Leave empty to auto-calculate from selected items.</p>
+          </div>
+        </div>
+
         <div class="mt-4">
           <div class="mb-2 flex items-center justify-between">
             <h6 class="font-extrabold text-sm">Deal Items</h6>
@@ -62,7 +75,7 @@ import { ToastService } from 'src/app/services/toast.service';
 
         <div class="flex items-center gap-2">
           <button type="submit" class="btn btn-primary" [disabled]="submitting || form.invalid">Save Deal</button>
-          <button type="button" class="btn btn-outline-danger" [disabled]="submitting" (click)="form.reset({ name: '', expire_at: '' })">Clear</button>
+          <button type="button" class="btn btn-outline-danger" [disabled]="submitting" (click)="form.reset({ name: '', expire_at: '', cost: '', sale: '', items: [] })">Clear</button>
         </div>
       </form>
     </div>
@@ -85,6 +98,8 @@ export class AddDealComponent implements OnInit {
     this.form = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
       expire_at: ['', [Validators.required]], // datetime-local
+      cost: [''],
+      sale: [''],
       items: this.fb.array([] as FormGroup[]),
     });
     this.fetchProducts();
@@ -153,11 +168,13 @@ export class AddDealComponent implements OnInit {
       totalCost += cost * qty;
       totalSale += sale * qty;
     }
+    const enteredCost = v.cost !== null && v.cost !== '' ? Number(v.cost) : null;
+    const enteredSale = v.sale !== null && v.sale !== '' ? Number(v.sale) : null;
     const payload = {
       name: v.name,
       expire_at: this.toSqlDateTime(v.expire_at),
-      cost: Number(totalCost.toFixed(2)),
-      sale: Number(totalSale.toFixed(2)),
+      cost: Number((enteredCost ?? totalCost).toFixed(2)),
+      sale: Number((enteredSale ?? totalSale).toFixed(2)),
       dealItem,
     };
     // eslint-disable-next-line no-console

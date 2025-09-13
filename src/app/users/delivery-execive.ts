@@ -5,6 +5,10 @@ import { toggleAnimation } from 'src/app/shared/animations';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ToastService } from 'src/app/services/toast.service';
 import Swal from 'sweetalert2';
+import { Role } from 'src/app/enums/role.enum';
+import { StaffSyncService } from 'src/app/services/staff-sync.service';
+import { IdbService } from 'src/app/services/idb.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   templateUrl: './delivery-execive.html',
@@ -14,12 +18,14 @@ export class DeliveryExeciveComponent implements OnInit {
   loading = false;
   error: string | null = null;
   executives: ManagerItem[] = [];
+  // search term for filtering
+  search = '';
   // Update sidebar (edit waiter-like)
   showUpdateSidebar = false;
   updateForm!: FormGroup;
   updating = false;
   selectedItem: ManagerItem | null = null;
-
+public imgUrl=environment.imgUrl;
   // Add Member Sidebar
   showAddSidebar = false;
   addForm!: FormGroup;
@@ -40,11 +46,28 @@ export class DeliveryExeciveComponent implements OnInit {
   imageEditPreview: string | null = null;
   cnicEditPreview: string | null = null;
 
-  constructor(private staffService: StaffService, private fb: FormBuilder, private toast: ToastService) {}
+  constructor(private staffService: StaffService, private fb: FormBuilder, private toast: ToastService, private staffSync: StaffSyncService, private idb: IdbService) {}
 
   ngOnInit(): void {
     this.fetchExecutives();
     this.buildAddForm();
+  }
+
+  // filtered view for template
+  get filteredExecutives(): ManagerItem[] {
+    const term = (this.search || '').toLowerCase().trim();
+    if (!term) return this.executives || [];
+    return (this.executives || []).filter((e: any) => {
+      const name = (e?.name || '').toString().toLowerCase();
+      const email = (e?.email || '').toString().toLowerCase();
+      const phone = (e?.phone || '').toString().toLowerCase();
+      const role = (e?.role || '').toString().toLowerCase();
+      return name.includes(term) || email.includes(term) || phone.includes(term) || role.includes(term);
+    });
+  }
+
+  trackByExecId(index: number, e: any): string | number {
+    return e?.id ?? index;
   }
 
   // ---------- Edit uploads for update form ----------
@@ -88,10 +111,12 @@ export class DeliveryExeciveComponent implements OnInit {
   removeEditAgreement(): void { this.agreementEditPreview = null; this.selectedAgreementBase64 = ''; this.agreementFileType = ''; }
   removeEditCnic(): void { this.cnicEditPreview = null; this.selectedCnicBase64 = ''; this.cnicFileType = ''; }
 
+  // Match rider roles
   private isWaiter(val: any): boolean {
     try {
+      if (val === Role.Rider) return true;
       const s = String(val || '').toLowerCase();
-      return s.includes('waiter');
+      return s.includes('rider');
     } catch {
       return false;
     }
@@ -111,7 +136,7 @@ export class DeliveryExeciveComponent implements OnInit {
   fetchExecutives(): void {
     this.loading = true;
     this.error = null;
-    // Backend "allManager" is assumed to return all staff; filter to only waiters
+    // Backend "allManager" is assumed to return all staff; filter to only riders
     this.staffService.getManagers().subscribe({
       next: (list: ManagerItem[]) => {
         const items = Array.isArray(list) ? list : [];
@@ -242,7 +267,22 @@ export class DeliveryExeciveComponent implements OnInit {
     const extention: 'pdf' | 'image' | null = this.agreementFileType?.toLowerCase().includes('pdf') ? 'pdf' : (agrement ? 'image' : null);
     const image: string | null = this.selectedImageBase64 || this.addForm.value?.image || null;
     const cnic: string | null = this.selectedCnicBase64 || this.addForm.value?.cnic || null;
-    const basePayload: any = { name, password, phone, role: 'waiter', email, image, cnic, agrement, extention };
+    const basePayload: any = { name, password, phone, role: 'rider', email, image, cnic, agrement, extention };
+
+    const appendLocal = () => {
+      const created: any = { id: Date.now(), ...basePayload };
+      this.executives = [created, ...this.executives];
+    };
+
+    // Offline path: queue and update UI, do not call API
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.staffSync.queueStaff(basePayload).then(() => this.staffSync.trySync());
+      appendLocal();
+      this.toast.success('Saved offline. Will sync when online.');
+      this.closeAddSidebar();
+      return;
+    }
+
     this.submitting = true;
     this.staffService.addManage(basePayload).subscribe({
       next: () => {
@@ -251,8 +291,15 @@ export class DeliveryExeciveComponent implements OnInit {
         this.closeAddSidebar();
         this.fetchExecutives();
       },
-      error: (err) => {
+      error: async (err) => {
         this.submitting = false;
+        if (!err || err.status === 0) {
+          await this.staffSync.queueStaff(basePayload);
+          appendLocal();
+          this.toast.success('No internet. Saved offline and will sync later.');
+          this.closeAddSidebar();
+          return;
+        }
         const msg = err?.error?.message || 'Failed to add';
         this.toast.error(msg);
       },
@@ -322,10 +369,23 @@ export class DeliveryExeciveComponent implements OnInit {
     }
     const image = this.selectedImageBase64 || this.imageEditPreview || existingImg || null;
     const cnic = this.selectedCnicBase64 || this.cnicEditPreview || existingCnic || null;
-    const payload: any = { id, name, email, phone, role: 'waiter', image, cnic, agrement, extention };
+    const payload: any = { id, name, email, phone, role: 'rider', image, cnic, agrement, extention };
     if (password) payload.password = password;
+    const applyLocal = () => {
+      this.executives = (this.executives || []).map((x: any) => (x.id === id ? { ...x, name, email, phone, image, cnic, agrement, extention } : x));
+    };
+
+    // Offline: queue update and update UI locally
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.staffSync.queueUpdate(payload).then(() => this.staffSync.trySync());
+      applyLocal();
+      this.toast.success('Saved update offline. Will sync when online.');
+      this.closeUpdateSidebar();
+      return;
+    }
+
     this.updating = true;
-    // Use manager update endpoint as requested
+    // Use manager update endpoint for rider
     this.staffService.updateManager(payload).subscribe({
       next: (resp) => {
         this.updating = false;
@@ -337,8 +397,15 @@ export class DeliveryExeciveComponent implements OnInit {
         this.closeUpdateSidebar();
         this.fetchExecutives();
       },
-      error: (err) => {
+      error: async (err) => {
         this.updating = false;
+        if (!err || err.status === 0) {
+          await this.staffSync.queueUpdate(payload);
+          applyLocal();
+          this.toast.success('No internet. Update saved offline and will sync later.');
+          this.closeUpdateSidebar();
+          return;
+        }
         const msg = err?.error?.message || 'Failed to update';
         this.toast.error(msg);
       },

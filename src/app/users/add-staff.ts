@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { toggleAnimation } from 'src/app/shared/animations';
 import { StaffService } from 'src/app/services/staff.service';
+import { StaffSyncService } from 'src/app/services/staff-sync.service';
 import { ManagerItem, AddManagePayload } from 'src/app/interfaces/staff.interface';
 import { Role } from 'src/app/enums/role.enum';
 import { ToastService } from 'src/app/services/toast.service';
@@ -13,7 +14,9 @@ import { Router } from '@angular/router';
 })
 export class AddStaffComponent implements OnInit {
   form!: FormGroup;
-  roles = [Role.Manager, Role.Waiter];
+  roles = [Role.Admin, Role.Manager, Role.Waiter, Role.Rider, Role.Cook, Role.Consumer];
+  // expose enum to template for comparisons
+  Role = Role;
   loadingManagers = false;
   managers: ManagerItem[] = [];
   error: string | null = null;
@@ -34,6 +37,7 @@ export class AddStaffComponent implements OnInit {
     private staffService: StaffService,
     private toast: ToastService,
     private router: Router,
+    private staffSync: StaffSyncService,
   ) {
     this.buildForm();
   }
@@ -151,6 +155,20 @@ export class AddStaffComponent implements OnInit {
       agreement, // { extension: 'pdf'|'img', image: base64 }
     } as Partial<AddManagePayload> as any;
 
+    const goAfter = () => {
+      if (role === Role.Waiter) this.router.navigate(['/users/all-waiters']);
+      else this.router.navigate(['/users/all-manager']);
+    };
+
+    // Offline path: queue to IDB and navigate immediately
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const toQueue = role === Role.Waiter ? { ...payload, managerId } : payload;
+      this.staffSync.queueStaff({ ...toQueue, role: String(role).toLowerCase() }).then(() => this.staffSync.trySync());
+      this.toast.success('Saved offline. Will sync when online.');
+      goAfter();
+      return;
+    }
+
     this.submitting = true;
     if (role === Role.Waiter) {
       const waiterPayload: any = { ...payload, managerId };
@@ -158,23 +176,36 @@ export class AddStaffComponent implements OnInit {
         next: () => {
           this.submitting = false;
           this.toast.success('Waiter added successfully');
-          this.router.navigate(['/users/all-waiters']);
+          goAfter();
         },
-        error: (err) => {
+        error: async (err) => {
           this.submitting = false;
+          if (!err || err.status === 0) {
+            await this.staffSync.queueStaff({ ...waiterPayload, role: 'waiter' });
+            this.toast.success('No internet. Saved offline and will sync later.');
+            goAfter();
+            return;
+          }
           const msg = err?.error?.message || 'Failed to add waiter';
           this.toast.error(msg);
         },
       });
     } else {
-      this.staffService.addManage(payload as AddManagePayload).subscribe({
+      const managePayload = { ...payload, role: String(role).toLowerCase() } as AddManagePayload;
+      this.staffService.addManage(managePayload).subscribe({
         next: () => {
           this.submitting = false;
           this.toast.success('Manager added successfully');
-          this.router.navigate(['/users/all-manager']);
+          goAfter();
         },
-        error: (err) => {
+        error: async (err) => {
           this.submitting = false;
+          if (!err || err.status === 0) {
+            await this.staffSync.queueStaff(managePayload);
+            this.toast.success('No internet. Saved offline and will sync later.');
+            goAfter();
+            return;
+          }
           const msg = err?.error?.message || 'Failed to add manager';
           this.toast.error(msg);
         },

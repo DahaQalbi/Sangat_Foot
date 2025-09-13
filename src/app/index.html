@@ -29,9 +29,9 @@
                             <div>
                                 <p class="text-white-dark">Today's Orders</p>
                                 <div class="mt-1 text-3xl font-bold">{{ stats.todayOrders }}</div>
-                                <div class="mt-1 text-xs text-success flex items-center">
-                                    <span class="mr-1">▲</span>
-                                    200% <span class="ml-1 text-white-dark">Since yesterday</span>
+                                <div class="mt-1 text-xs flex items-center" [ngClass]="(stats.todayOrdersDeltaPct||0) >= 0 ? 'text-success' : 'text-danger'">
+                                    <span class="mr-1">{{ (stats.todayOrdersDeltaPct||0) >= 0 ? '▲' : '▼' }}</span>
+                                    {{ stats.todayOrdersDeltaPct | number:'1.0-2' }}% <span class="ml-1 text-white-dark">Since yesterday</span>
                                 </div>
                             </div>
                         </div>
@@ -42,9 +42,9 @@
                             <div>
                                 <p class="text-white-dark">Today's Earnings</p>
                                 <div class="mt-1 text-3xl font-bold">${{ stats.todayEarnings | number:'1.0-0' }}.00</div>
-                                <div class="mt-1 text-xs text-success flex items-center">
-                                    <span class="mr-1">▲</span>
-                                    186.39% <span class="ml-1 text-white-dark">Since yesterday</span>
+                                <div class="mt-1 text-xs flex items-center" [ngClass]="(stats.todayEarningsDeltaPct||0) >= 0 ? 'text-success' : 'text-danger'">
+                                    <span class="mr-1">{{ (stats.todayEarningsDeltaPct||0) >= 0 ? '▲' : '▼' }}</span>
+                                    {{ stats.todayEarningsDeltaPct | number:'1.0-2' }}% <span class="ml-1 text-white-dark">Since yesterday</span>
                                 </div>
                             </div>
                         </div>
@@ -55,9 +55,9 @@
                             <div>
                                 <p class="text-white-dark">Today's Customer</p>
                                 <div class="mt-1 text-3xl font-bold">{{ stats.todayCustomers }}</div>
-                                <div class="mt-1 text-xs text-success flex items-center">
-                                    <span class="mr-1">▲</span>
-                                    150% <span class="ml-1 text-white-dark">Since yesterday</span>
+                                <div class="mt-1 text-xs flex items-center" [ngClass]="(stats.todayCustomersDeltaPct||0) >= 0 ? 'text-success' : 'text-danger'">
+                                    <span class="mr-1">{{ (stats.todayCustomersDeltaPct||0) >= 0 ? '▲' : '▼' }}</span>
+                                    {{ stats.todayCustomersDeltaPct | number:'1.0-2' }}% <span class="ml-1 text-white-dark">Since yesterday</span>
                                 </div>
                             </div>
                         </div>
@@ -84,9 +84,10 @@
                             <div class="text-white-dark">Sales This Month</div>
                         </div>
                         <div class="text-right">
-                            <div class="text-success text-sm flex items-center justify-end">
-                                <span class="mr-1">▲</span>
-                                1306300%
+                            <div class="text-sm flex items-center justify-end text-white-dark">
+                                <!-- Placeholder: Month-over-month not available from API -->
+                                <span class="mr-1">—</span>
+                                N/A
                             </div>
                             <div class="text-xs text-white-dark">Since Previous Month</div>
                         </div>

@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { OrderService } from 'src/app/services/order.service';
+import { IdbService } from 'src/app/services/idb.service';
 import { OrderStatus } from './order-status.enum';
 import { environment } from 'src/environments/environment';
 
@@ -85,27 +86,56 @@ export class PaidOrdersComponent implements OnInit {
   // Optional company name from environment (not typed in env interface)
   companyName: string | undefined = (environment as any)?.companyName;
 
-  constructor(private orderService: OrderService) {}
+  constructor(private orderService: OrderService, private idb: IdbService) {}
 
   ngOnInit(): void {
     this.fetchPaid();
   }
 
-  fetchPaid() {
+  async fetchPaid() {
     this.loading = true;
     this.error = null;
-    this.orderService.getAllOrders().subscribe({
-      next: (res: any) => {
-        const data = Array.isArray(res) ? res : (res?.data || res?.orders || []);
-        const normalized = (data || []).map((o: any, idx: number) => this.toCard(o, idx));
-        this.orders = normalized.filter((o: any) => o.status === OrderStatus.Paid);
-        this.loading = false;
-      },
-      error: (err: any) => {
-        this.loading = false;
-        this.error = err?.error?.message || 'Failed to load orders';
-      },
-    });
+    try {
+      const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (online) {
+        this.orderService.getAllOrders().subscribe({
+          next: async (res: any) => {
+            const serverData: any[] = Array.isArray(res) ? res : (res?.data || res?.orders || []);
+            // Merge in any local pending/offline orders to keep cache consistent
+            let localAll: any[] = [];
+            try { localAll = await this.idb.getAll<any>('orders'); } catch {}
+            const pendingLocal = (localAll || []).filter((o: any) => o && (o.status === 'pending_sync' || o.offline === true));
+            const serverIdSet = new Set((serverData || []).map((x: any) => String(x?.id ?? x?._id ?? '')));
+            const merged = [...serverData, ...pendingLocal.filter((p: any) => !serverIdSet.has(String(p.id)))];
+
+            const normalized = (merged || []).map((o: any, idx: number) => this.toCard(o, idx));
+            this.orders = normalized.filter((o: any) => o.status === OrderStatus.Paid);
+            this.loading = false;
+            try { await this.idb.replaceAll('orders', merged); } catch {}
+          },
+          error: async (err: any) => {
+            // Fallback to local cache
+            try {
+              const local = await this.idb.getAll<any>('orders');
+              const normalized = (local || []).map((o: any, idx: number) => this.toCard(o, idx));
+              this.orders = normalized.filter((o: any) => o.status === OrderStatus.Paid);
+            } catch {}
+            this.loading = false;
+            this.error = err?.error?.message || 'Failed to load orders';
+          },
+        });
+        return;
+      }
+
+      // Offline: show local cache only
+      const local = await this.idb.getAll<any>('orders');
+      const normalized = (local || []).map((o: any, idx: number) => this.toCard(o, idx));
+      this.orders = normalized.filter((o: any) => o.status === OrderStatus.Paid);
+      this.loading = false;
+    } catch (e) {
+      this.loading = false;
+      this.error = 'Failed to load orders';
+    }
   }
 
   get filtered(): any[] {

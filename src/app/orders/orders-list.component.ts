@@ -1,12 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { OrderService } from 'src/app/services/order.service';
+import { IdbService } from 'src/app/services/idb.service';
+import { ToastService } from 'src/app/services/toast.service';
 import { OrderStatus } from './order-status.enum';
 
 @Component({
   selector: 'app-orders-list',
   templateUrl: './orders-list.component.html',
 })
-export class OrdersListComponent implements OnInit {
+export class OrdersListComponent implements OnInit, OnDestroy {
   loading = false;
   error: string | null = null;
   orders: any[] = [];
@@ -19,10 +22,19 @@ export class OrdersListComponent implements OnInit {
   // order type filter tab: 'all' | 'delivery' | 'dine-in'
   selectedTab: 'all' | 'delivery' | 'dine-in' = 'all'; 
 
-  constructor(private orderService: OrderService) {}
+  private onlineHandler = () => this.syncPending().catch(() => {});
+
+  constructor(private orderService: OrderService, private idb: IdbService, private toast: ToastService) {}
 
   ngOnInit(): void {
     this.fetchOrders();
+    // attempt a sync on load and when connection comes back
+    this.syncPending().catch(() => {});
+    window.addEventListener('online', this.onlineHandler);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('online', this.onlineHandler);
   }
 
   get filtered(): any[] {
@@ -47,22 +59,52 @@ export class OrdersListComponent implements OnInit {
     });
   }
 
-  fetchOrders() {
+  async fetchOrders() {
     this.loading = true;
     this.error = null;
-    this.orderService.getAllOrders().subscribe({
-      next: (res: any) => {
-        const data = Array.isArray(res) ? res : (res?.data || res?.orders || []);
-        const all = (data || []).map((o: any, idx: number) => this.toCard(o, idx));
-        // Exclude completed & paid orders here; they are listed on their own pages
-        this.orders = all.filter((o: any) => o.status !== OrderStatus.Completed && o.status !== OrderStatus.Paid);
-        this.loading = false;
-      },
-      error: (err: any) => {
-        this.loading = false;
-        this.error = err?.error?.message || 'Failed to load orders';
-      },
-    });
+    try {
+      const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (online) {
+        // Online: fetch from API and refresh cache
+        this.orderService.getAllOrders().subscribe({
+          next: async (res: any) => {
+            const serverData: any[] = Array.isArray(res) ? res : (res?.data || res?.orders || []);
+            // Merge in any local pending/offline orders that aren't on the server by id
+            let localAll: any[] = [];
+            try { localAll = await this.idb.getAll<any>('orders'); } catch {}
+            const pendingLocal = (localAll || []).filter((o: any) => o && (o.status === 'pending_sync' || o.offline === true));
+            const serverIdSet = new Set((serverData || []).map((x: any) => String(x?.id ?? x?._id ?? '')));
+            const merged = [...serverData, ...pendingLocal.filter((p: any) => !serverIdSet.has(String(p.id)))];
+
+            const allCards = merged.map((o: any, idx: number) => this.toCard(o, idx));
+            this.orders = allCards.filter((o: any) => o.status !== OrderStatus.Completed && o.status !== OrderStatus.Paid);
+            this.loading = false;
+            // update local cache in background with merged dataset
+            try { await this.idb.replaceAll('orders', merged); } catch {}
+          },
+          error: async (err: any) => {
+            // If API fails while online, fallback to local cache for display
+            try {
+              const local = await this.idb.getAll<any>('orders');
+              const allLocal = (local || []).map((o: any, idx: number) => this.toCard(o, idx));
+              this.orders = allLocal.filter((o: any) => o.status !== OrderStatus.Completed && o.status !== OrderStatus.Paid);
+            } catch {}
+            this.loading = false;
+            this.error = err?.error?.message || 'Failed to load orders';
+          },
+        });
+        return;
+      }
+
+      // Offline: show local cache only
+      const local = await this.idb.getAll<any>('orders');
+      const allLocal = (local || []).map((o: any, idx: number) => this.toCard(o, idx));
+      this.orders = allLocal.filter((o: any) => o.status !== OrderStatus.Completed && o.status !== OrderStatus.Paid);
+      this.loading = false;
+    } catch (e) {
+      this.loading = false;
+      this.error = 'Failed to load orders';
+    }
   }
 
   private toCard(o: any, idx: number) {
@@ -137,6 +179,64 @@ export class OrdersListComponent implements OnInit {
     if (s === 'paid' || s === 'pay' || s === 'payment') return OrderStatus.Paid;
     if (s === 'cancel' || s === 'cancell' || s === 'cancelled' || s === 'canceled') return OrderStatus.Cancel;
     return OrderStatus.Pending;
+  }
+
+  // ------- Offline sync for pending orders saved in IndexedDB -------
+  private async syncPending(): Promise<void> {
+    try {
+      // Only run when online
+      if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
+      const all = await this.idb.getAll<any>('orders');
+      const pending = (all || []).filter((o: any) => o && (o.status === 'pending_sync' || o.offline === true));
+      if (!pending.length) return;
+
+      for (let i = 0; i < pending.length; i++) {
+        const local = pending[i];
+        // Build payload compatible with API
+        const payload = {
+          id: local.id,
+          tableNo: local.tableNo,
+          orderType: local.orderType,
+          discount: Number(local.discount) || 0,
+          cost: Number(local.cost) || 0,
+          sale: Number(local.sale) || 0,
+          net: Number(local.net) || 0,
+          status: local.status === 'pending_sync' ? 'pending' : (local.status || 'pending'),
+          deal_id: local.deal_id ?? null,
+          userId: local.userId ?? null,
+          delivery_fee: Number(local.delivery_fee) || 0,
+          note: local.note || '',
+          delivery_type: local.delivery_type,
+          address: local.address || '',
+          sgst: Number(local.sgst) || 0,
+          cgst: Number(local.cgst) || 0,
+          orderDetails: Array.isArray(local.orderDetails) ? local.orderDetails.map((r: any, idx: number) => ({
+            id: r.id || idx + 1,
+            product_id: r.product_id,
+            size: r.size,
+            cost: Number(r.cost) || 0,
+            sale: Number(r.sale) || 0,
+            note: r.note || '',
+          })) : [],
+        };
+
+        try {
+          const res = await firstValueFrom(this.orderService.addOrder(payload));
+          // Update local record on success
+          const serverId = res?.data?.id ?? res?.orderId ?? res?.id ?? local.serverId;
+          const updated = { ...local, serverId, offline: false, status: 'pending', updated_at: new Date().toISOString() };
+          const idx = all.findIndex((o: any) => String(o.id) === String(local.id));
+          if (idx !== -1) all[idx] = updated;
+          await this.idb.replaceAll('orders', all);
+        } catch {
+          // keep it pending for next time
+        }
+      }
+
+      if (pending.length) this.toast.success('Offline orders synced');
+    } catch {
+      // ignore
+    }
   }
 }
 

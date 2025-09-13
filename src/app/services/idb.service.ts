@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
 // Lightweight IndexedDB helper focused on simple key-value and list storage
-// DB: 'sangat_foot', version 4
+// DB: 'sangat_foot', version 5
 // Object stores:
 //  - 'waiters' with keyPath 'id'
 //  - 'managers' with keyPath 'id'
@@ -16,7 +16,7 @@ export class IdbService {
     if (this.dbPromise) return this.dbPromise;
 
     this.dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open('sangat_foot', 4);
+      const req = indexedDB.open('sangat_foot', 5);
       req.onupgradeneeded = () => {
         const db = req.result;
         if (!db.objectStoreNames.contains('waiters')) {
@@ -30,6 +30,9 @@ export class IdbService {
         }
         if (!db.objectStoreNames.contains('orders')) {
           db.createObjectStore('orders', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('pending_staff')) {
+          db.createObjectStore('pending_staff', { keyPath: 'id' });
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -87,6 +90,40 @@ export class IdbService {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  // Convenience helpers
+  async putOne<T extends Record<string, any>>(storeName: string, item: T): Promise<void> {
+    const db = await this.openDB();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const r = store.put(item);
+      r.onsuccess = () => resolve();
+      r.onerror = () => reject(r.error);
+    });
+  }
+
+  async getByKey<T>(storeName: string, key: IDBValidKey): Promise<T | undefined> {
+    const db = await this.openDB();
+    return new Promise<T | undefined>((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result as T | undefined);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async deleteByKey(storeName: string, key: IDBValidKey): Promise<void> {
+    const db = await this.openDB();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
     });
   }
 }

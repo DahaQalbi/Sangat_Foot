@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, ElementRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { OrderService } from 'src/app/services/order.service';
@@ -14,18 +14,19 @@ import { ToastService } from 'src/app/services/toast.service';
     <div class="panel max-w-5xl mx-auto">
       <div class="flex items-center justify-between mb-4" [formGroup]="form">
         <div class="flex gap-3">
-          <label class="inline-flex items-center gap-2 p-2 rounded border" [class.border-primary]="form.value.delivery_type==='delivery'">
+          <label class="inline-flex items-center gap-2 p-2 rounded border"
+                 [ngClass]="form.value.delivery_type==='delivery' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'">
             <input type="radio" class="form-radio" name="delivery_type" value="delivery" formControlName="delivery_type" (change)="onRecalc()" />
             <span>Delivery</span>
           </label>
-          <label class="inline-flex items-center gap-2 p-2 rounded border" [class.border-primary]="form.value.delivery_type==='dine-in'">
+          <label class="inline-flex items-center gap-2 p-2 rounded border"
+                 [ngClass]="form.value.delivery_type==='dine-in' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'">
             <input type="radio" class="form-radio" name="delivery_type" value="dine-in" formControlName="delivery_type" (change)="onRecalc()" />
             <span>Dine-in</span>
           </label>
         </div>
         <div class="flex items-center gap-2">
           <button type="button" class="btn btn-outline-primary" (click)="openAddProducts()">Add Products</button>
-          <div class="text-sm font-semibold">Add Note</div>
         </div>
       </div>
 
@@ -49,12 +50,25 @@ import { ToastService } from 'src/app/services/toast.service';
         </div>
 
         <div>
-          <div class="flex items-center justify-between mb-2">
+          <div class="flex items-start justify-between mb-2">
             <h5 class="text-lg font-extrabold text-red-600">Order #{{orderId}}</h5>
-            <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 rounded border" (click)="toggleDiscount()">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6"/></svg>
-              Add Discount
-            </button>
+            <div class="flex flex-col items-end gap-1">
+              <!-- Add Note button above Add Discount (text + small square icon) -->
+              <button type="button" (click)="openNoteModal()" ngxTippy data-tippy-content="Add Note"
+                      class="inline-flex items-center gap-2 px-3 py-1.5 rounded border text-gray-700 hover:text-primary hover:border-primary">
+                <span class="font-semibold">Add Note</span>
+                <span class="inline-flex items-center justify-center w-6 h-6 rounded-md border">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 20h9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 rounded border" (click)="toggleDiscount()">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6"/></svg>
+                Add Discount
+              </button>
+            </div>
           </div>
 
           <div class="overflow-x-auto rounded border">
@@ -71,8 +85,6 @@ import { ToastService } from 'src/app/services/toast.service';
                 <tr *ngFor="let it of orderDetails.controls; let i=index" [formGroupName]="i" class="border-t">
                   <td class="px-3 py-2">
                     <div class="font-semibold">{{ it.value.name }}</div>
-                    <div class="text-xs text-gray-500">+ Add Note</div>
-                    <input type="text" formControlName="note" class="form-input w-full mt-1" placeholder="Add note" (input)="onRecalc()" />
                   </td>
                   <td class="px-3 py-2">
                     <div class="flex items-center justify-center gap-2">
@@ -105,9 +117,12 @@ import { ToastService } from 'src/app/services/toast.service';
               <label class="mb-1 block text-sm font-medium">CGST (%)</label>
               <input type="number" class="form-input w-full" formControlName="cgst" (input)="onRecalc()" placeholder="0" />
             </div>
-            <div>
-              <label class="mb-1 block text-sm font-medium">Add Note</label>
-              <textarea class="form-textarea w-full" rows="2" formControlName="note" placeholder="Please make it less spicy"></textarea>
+            <!-- Show note as a paragraph under the tax inputs (left column) -->
+            <div *ngIf="(form.value.note || '').trim()" class="md:col-span-2">
+              <div class="rounded border p-2 bg-white dark:bg-transparent">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-300 mb-1">Order Note</div>
+                <div class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ form.value.note }}</div>
+              </div>
             </div>
           </div>
           <div class="rounded border p-4 bg-gray-50">
@@ -183,6 +198,31 @@ import { ToastService } from 'src/app/services/toast.service';
           </div>
         </div>
       </div>
+
+      <!-- Note Modal -->
+      <div *ngIf="showNoteModal" class="fixed inset-0 overflow-hidden" style="z-index: 1000;">
+        <div class="absolute inset-0 bg-black/50" (click)="closeNoteModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white dark:bg-[#0e1726] shadow-2xl will-change-transform rounded-md"
+             [style.transition]="'transform 300ms ease-in-out, opacity 200ms ease-in-out'"
+             [style.opacity]="showNoteModal ? 1 : 0"
+             [style.transform]="showNoteModal ? 'translate(-50%, -50%)' : 'translate(-50%, -60%)'">
+          <div class="p-4 h-full flex flex-col">
+            <div class="mb-2 flex items-center justify-between">
+              <div class="font-extrabold text-gray-800 dark:text-gray-100">Add Note</div>
+              <button type="button" class="text-gray-500 hover:text-gray-800" (click)="closeNoteModal()">✕</button>
+            </div>
+
+            <div class="rounded-md border p-2">
+              <textarea [(ngModel)]="noteDraft" [ngModelOptions]="{standalone:true}" class="form-textarea w-full text-sm p-2 rounded-md" rows="3" placeholder="Please make it less spicy"></textarea>
+            </div>
+
+            <div class="mt-3 flex items-center justify-end gap-2">
+              <button type="button" class="btn btn-outline-primary" (click)="closeNoteModal()">Cancel</button>
+              <button type="button" class="btn !bg-red-600 hover:!bg-red-700 text-white" (click)="saveNoteModal()">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
 })
@@ -215,6 +255,9 @@ export class TableInfoComponent implements OnInit {
   loadingProducts = false;
   productsError: string | null = null;
   picked: Map<string | number, { product: any; qty: number }> = new Map();
+  @ViewChild('orderNote') orderNote!: ElementRef<HTMLTextAreaElement>;
+  showNoteModal = false;
+  noteDraft = '';
 
   constructor(
     private fb: FormBuilder,
@@ -381,6 +424,31 @@ export class TableInfoComponent implements OnInit {
 
   toggleDiscount() {
     this.showDiscount = !this.showDiscount;
+  }
+
+  // Focus helper for the top-level order note (triggered by the note icon above the table)
+  focusOrderNote(): void {
+    try {
+      const el = this.orderNote?.nativeElement;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
+    } catch {}
+  }
+
+  // ----- Note Modal -----
+  openNoteModal(): void {
+    this.noteDraft = this.form?.value?.note || '';
+    this.showNoteModal = true;
+  }
+  closeNoteModal(): void {
+    this.showNoteModal = false;
+  }
+  saveNoteModal(): void {
+    const text = (this.noteDraft || '').trim();
+    this.form.patchValue({ note: text });
+    this.showNoteModal = false;
   }
 
   // ----- Add Products Sidebar -----
@@ -560,28 +628,56 @@ export class TableInfoComponent implements OnInit {
           note: r.note || '',
         })),
       };
-      // Call API to create order
+      // If offline, store locally and mark for sync
+      if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+        const updated = {
+          ...all[idx],
+          ...payload,
+          status: 'pending_sync',
+          updated_at: new Date().toISOString(),
+          offline: true,
+        };
+        all[idx] = updated;
+        await this.idb.replaceAll('orders', all);
+        this.toast.success('Saved offline. Will sync when back online.');
+        await this.playOrderBell();
+        this.router.navigate(['/orders/list']);
+        return;
+      }
+
+      // Call API to create order (online path)
       let apiRes: any = null;
       try {
         apiRes = await firstValueFrom(this.orderService.addOrder(payload));
         this.toast.success('Order Placed');
-        this.playOrderBell();
+        await this.playOrderBell();
       } catch (e:any) {
-        this.toast.error(e?.error?.message || 'Failed to post order');
+        // If API fails, fallback to offline storage
+        const updatedOffline = {
+          ...all[idx],
+          ...payload,
+          status: 'pending_sync',
+          updated_at: new Date().toISOString(),
+          offline: true,
+        };
+        all[idx] = updatedOffline;
+        await this.idb.replaceAll('orders', all);
+        this.toast.success('Saved offline. Will sync when back online.');
+        await this.playOrderBell();
+        this.router.navigate(['/orders/list']);
+        return;
       }
 
-      // Persist locally as well
+      // Persist locally with server id
       const updated = {
         ...all[idx],
         ...payload,
         serverId: apiRes?.data?.id ?? apiRes?.orderId ?? apiRes?.id ?? all[idx]?.serverId,
         updated_at: new Date().toISOString(),
+        offline: false,
       };
       all[idx] = updated;
       await this.idb.replaceAll('orders', all);
-      this.toast.success('Order Placed');
-      // Ensure bell even if API failed but local save succeeded
-      this.playOrderBell();
       this.router.navigate(['/orders/list']);
     } catch (e) {
       this.toast.error('Failed to save table info');

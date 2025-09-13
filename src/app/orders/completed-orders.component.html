@@ -42,11 +42,15 @@
             </div>
           </div>
           <ng-container *ngIf="!isPaid(o); else paidTpl">
-            <button type="button" class="rounded bg-emerald-600 px-2 py-1 text-[10px] font-bold uppercase text-white hover:brightness-95" (click)="markPaid(o)">Mark Paid</button>
+            <div class="flex items-center gap-2">
+              <button type="button" class="rounded bg-emerald-600 px-2 py-1 text-[10px] font-bold uppercase text-white hover:brightness-95" (click)="markPaid(o)">Mark Paid</button>
+              <button type="button" class="rounded border border-gray-300 px-2 py-1 text-[10px] font-semibold hover:bg-gray-50" (click)="printInvoice(o)">Print PDF</button>
+            </div>
           </ng-container>
           <ng-template #paidTpl>
             <div class="flex items-center gap-2">
               <span class="rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700">Paid</span>
+              <button type="button" class="rounded border border-gray-300 px-2 py-1 text-[10px] font-semibold hover:bg-gray-50" (click)="printInvoice(o)">Print PDF</button>
             </div>
           </ng-template>
         </div>

@@ -27,6 +27,28 @@
       </div>
     </div>
 
+    <!-- Description (optional) -->
+    <div>
+      <label class="mb-1 block font-medium">Description <span class="text-xs text-gray-400">(optional)</span></label>
+      <textarea class="form-textarea w-full" rows="3" placeholder="Short description of the product" formControlName="description"></textarea>
+    </div>
+
+    <!-- Availability toggle -->
+    <div class="flex items-center gap-2">
+      <input id="isAvailable" type="checkbox" class="form-checkbox" formControlName="isAvailable" />
+      <label for="isAvailable" class="select-none">Available</label>
+    </div>
+
+    <!-- Preparation Time -->
+    <div>
+      <label class="mb-1 block font-medium">Preparation Time (minutes)</label>
+      <input type="number" min="1" inputmode="numeric" class="form-input w-full" placeholder="e.g. 15" formControlName="prepration_time" />
+      <div class="mt-1 text-xs text-danger" *ngIf="form.get('prepration_time')?.touched && form.get('prepration_time')?.errors">
+        <div *ngIf="form.get('prepration_time')?.errors?.['required']">Preparation time is required.</div>
+        <div *ngIf="form.get('prepration_time')?.errors?.['min']">Must be at least 1 minute.</div>
+      </div>
+    </div>
+
     <!-- Image selector box with inline preview -->
     <div>
       <label class="mb-1 block font-medium">Product Image</label>
@@ -67,6 +89,11 @@
 
     <!-- Size Type rows -->
     <div formArrayName="sizeType">
+      <!-- Variants toggle -->
+      <div class="mb-2 flex items-center gap-2">
+        <input id="variants" type="checkbox" class="form-checkbox" formControlName="hasVariant" />
+        <label for="variants" class="select-none">Has variants</label>
+      </div>
       <div class="mb-2 flex items-center justify-between">
         <label class="font-medium">Sizes</label>
         <button type="button" class="btn btn-primary" (click)="addSizeType()">+ Add Item</button>

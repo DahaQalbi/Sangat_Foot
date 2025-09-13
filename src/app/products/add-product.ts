@@ -34,6 +34,10 @@ export class AddProductComponent implements OnInit {
       category_id: [null, Validators.required],
       name: ['', [Validators.required, Validators.minLength(2)]],
       image: ['', Validators.required], // will store base64
+      description: [''],
+      preparation_time: [null, [Validators.required, Validators.min(1)]],
+      isAvailable: [true],
+      hasVariant: [false],
       sizeType: this.fb.array([] as FormGroup[]),
     });
   }

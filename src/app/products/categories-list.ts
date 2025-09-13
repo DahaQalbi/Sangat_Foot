@@ -43,6 +43,14 @@ export class CategoriesListComponent implements OnInit {
     if (event.previousIndex === event.currentIndex) return;
     // Local-only reorder (no API call)
     moveItemInArray(this.categories, event.previousIndex, event.currentIndex);
+    this.productService.updateCategoryOrder(this.categories).subscribe({
+      next: () => {
+        this.toast?.success?.('Categories reordered successfully');
+      },
+      error: (err) => {
+        this.toast?.error?.(err?.error?.message || 'Failed to reorder categories');
+      },
+    });
   }
 
   goToAdd() {

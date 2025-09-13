@@ -42,16 +42,16 @@
     <!-- Preparation Time -->
     <div>
       <label class="mb-1 block font-medium">Preparation Time (minutes)</label>
-      <input type="number" min="1" inputmode="numeric" class="form-input w-full" placeholder="e.g. 15" formControlName="prepration_time" />
-      <div class="mt-1 text-xs text-danger" *ngIf="form.get('prepration_time')?.touched && form.get('prepration_time')?.errors">
-        <div *ngIf="form.get('prepration_time')?.errors?.['required']">Preparation time is required.</div>
-        <div *ngIf="form.get('prepration_time')?.errors?.['min']">Must be at least 1 minute.</div>
+      <input type="number" min="1" inputmode="numeric" class="form-input w-full" placeholder="e.g. 15" formControlName="preparation_time" />
+      <div class="mt-1 text-xs text-danger" *ngIf="form.get('preparation_time')?.touched && form.get('preparation_time')?.errors">
+        <div *ngIf="form.get('preparation_time')?.errors?.['required']">Preparation time is required.</div>
+        <div *ngIf="form.get('preparation_time')?.errors?.['min']">Must be at least 1 minute.</div>
       </div>
     </div>
 
     <!-- Image selector box with inline preview -->
     <div>
-      <label class="mb-1 block font-medium">Product Image</label>
+      <label class="mb-1 block font-medium">Product Feature Image</label>
       <div class="w-full flex justify-center">
         <div class="relative cursor-pointer overflow-hidden rounded-xl border border-gray-200 shadow-md hover:ring-2 hover:ring-red-600/30 dark:border-gray-700"
              (click)="imageInput.click()">
@@ -85,6 +85,49 @@
       <div class="mt-1 text-xs text-danger" *ngIf="form.get('image')?.touched && form.get('image')?.invalid">
         Image is required.
       </div>
+    </div>
+
+    <!-- Product Gallery (multiple images) -->
+    <div class="mt-6">
+      <label class="mb-1 block font-medium">Product Gallery</label>
+      <div class="flex flex-wrap items-start gap-4">
+        <!-- Upload tile -->
+        <div class="relative cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-gray-50 text-gray-500 shadow-md hover:ring-2 hover:ring-red-600/30 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+             (click)="galleryInput.click()">
+          <div class="grid h-40 w-40 place-items-center">
+            <div class="flex flex-col items-center gap-1 text-xs">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>Select images</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview tiles -->
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" *ngIf="galleryPreviews.length">
+          <div class="relative overflow-hidden rounded-xl border border-gray-200 shadow-md dark:border-gray-700" *ngFor="let g of galleryPreviews; let i = index">
+            <img [src]="g" alt="Gallery" class="block h-40 w-40 object-cover" />
+            <button type="button" aria-label="Remove gallery image"
+                    class="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-red-600 text-[#faac1b] shadow hover:bg-red-700"
+                    (click)="removeGalleryImage(i)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3 flex items-center gap-3" *ngIf="galleryPreviews.length">
+        <button type="button" class="btn btn-outline-danger" (click)="clearGallery()">Clear All</button>
+        <span class="text-xs text-gray-500">{{ galleryPreviews.length }} selected</span>
+      </div>
+
+      <input #galleryInput type="file" accept="image/*" class="hidden" multiple (change)="onGalleryChange($event)" />
     </div>
 
     <!-- Size Type rows -->

@@ -13,7 +13,9 @@ export class AddProductComponent implements OnInit {
   loadingCategories = true;
   categories: any[] = [];
   previewUrl: string | null = null;
+  galleryPreviews: string[] = [];
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('galleryInput') galleryInputRef!: ElementRef<HTMLInputElement>;
 
   constructor(
     private fb: FormBuilder,
@@ -38,12 +40,17 @@ export class AddProductComponent implements OnInit {
       preparation_time: [null, [Validators.required, Validators.min(1)]],
       isAvailable: [true],
       hasVariant: [false],
+      gallery: this.fb.array([] as any[]),
       sizeType: this.fb.array([] as FormGroup[]),
     });
   }
 
   get sizeType(): FormArray<FormGroup> {
     return this.form.get('sizeType') as FormArray<FormGroup>;
+  }
+
+  get gallery(): FormArray {
+    return this.form.get('gallery') as FormArray;
   }
 
   addSizeType() {
@@ -86,6 +93,36 @@ export class AddProductComponent implements OnInit {
     this.form.patchValue({ image: this.stripDataUrlHeader(base64) });
   }
 
+  async onGalleryChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const files = input.files ? Array.from(input.files) : [];
+    if (!files.length) return;
+
+    const encoded = await Promise.all(files.map(f => this.toBase64(f)));
+    for (const dataUrl of encoded) {
+      this.galleryPreviews.push(dataUrl);
+      this.gallery.push(this.fb.control(this.stripDataUrlHeader(dataUrl)));
+    }
+    // Reset file input so the same files can be selected again if needed
+    if (this.galleryInputRef?.nativeElement) {
+      this.galleryInputRef.nativeElement.value = '';
+    }
+  }
+
+  removeGalleryImage(index: number) {
+    if (index < 0 || index >= this.gallery.length) return;
+    this.gallery.removeAt(index);
+    this.galleryPreviews.splice(index, 1);
+  }
+
+  clearGallery() {
+    while (this.gallery.length) this.gallery.removeAt(0);
+    this.galleryPreviews = [];
+    if (this.galleryInputRef?.nativeElement) {
+      this.galleryInputRef.nativeElement.value = '';
+    }
+  }
+
   clearImage() {
     this.form.patchValue({ image: '' });
     this.form.get('image')?.markAsPristine();
@@ -120,6 +157,7 @@ export class AddProductComponent implements OnInit {
     const payload = { ...this.form.value };
     // Ensure image is pure base64 without header
     payload.image = this.stripDataUrlHeader(payload.image);
+    // `gallery` entries are already stripped base64 strings
     this.submitting = true;
     this.productService.addProduct(payload).subscribe({
       next: () => {

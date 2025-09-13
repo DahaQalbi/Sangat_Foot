@@ -13,6 +13,9 @@ export class ProductService extends StaffService {
   addProduct(payload: any): Observable<any> {
     return this.http.post<any>(this.baseUrl + 'addProduct', payload);
   } 
+  updateCategoryOrder(payload: any): Observable<any> {
+    return this.http.put<any>(this.baseUrl + 'updateCategoryOrder', payload);
+  } 
   getAllCategories(): Observable<any> {
     return this.http.get<any>(this.baseUrl + 'getAllCategories');
   }

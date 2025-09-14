@@ -4,7 +4,7 @@
     <h5 class="text-lg font-extrabold text-red-600">Orders ({{ orders.length }})</h5>
     <div class="flex items-center gap-2">
       <input type="text" class="form-input h-9 w-56" [(ngModel)]="search" placeholder="Search id, customer, table, waiter, status" />
-      <a routerLink="/orders/add" class="btn btn-primary">New Order</a>
+      <a *ngIf="!isCook" routerLink="/orders/add" class="btn btn-primary">New Order</a>
     </div>
   </div>
 
@@ -43,7 +43,7 @@
           </div>
           <div class="flex items-center gap-2">
             <span class="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-700 dark:bg-white/10 dark:text-gray-200">{{ o.orderType }}</span>
-            <button type="button" class="grid h-7 w-7 place-items-center rounded border text-gray-600 hover:text-primary hover:border-primary"
+            <button *ngIf="!isCook" type="button" class="grid h-7 w-7 place-items-center rounded border text-gray-600 hover:text-primary hover:border-primary"
                (click)="openUpdate(o)" title="Update Order">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
                 <path d="M12 20h9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

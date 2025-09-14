@@ -1,4 +1,5 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { environment } from 'src/environments/environment';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ProductService } from 'src/app/services/product.service';
 import { ToastService } from 'src/app/services/toast.service';
@@ -16,6 +17,12 @@ export class AddProductComponent implements OnInit {
   galleryPreviews: string[] = [];
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('galleryInput') galleryInputRef!: ElementRef<HTMLInputElement>;
+  // edit mode
+  isUpdateMode = false;
+  editingId: string | number | null = null;
+  // hold original category info to resolve after categories load
+  originalCategoryIdOrValue: any = null;
+  originalCategoryName: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -27,8 +34,91 @@ export class AddProductComponent implements OnInit {
   ngOnInit(): void {
     this.buildForm();
     this.fetchCategories();
-    // Initialize with one size row by default
-    this.addSizeType();
+    // Ensure at least one size row initially
+    if (this.sizeType.length === 0) this.addSizeType();
+    // React to hasVariant toggle: when enabled ensure at least one size row; when disabled clear rows
+    const hv = this.form.get('hasVariant');
+    hv?.valueChanges.subscribe((val: boolean) => {
+      if (val) {
+        if (this.sizeType.length === 0) this.addSizeType();
+      } else {
+        // keep exactly one size row when variants are disabled
+        while (this.sizeType.length > 1) this.sizeType.removeAt(0);
+      }
+    });
+
+    // Detect navigation state for edit mode (from All Products -> onEdit)
+    try {
+      const st: any = history.state || {};
+      const product = st?.product;
+      this.isUpdateMode = !!st?.isUpdate && !!product;
+      if (this.isUpdateMode) {
+        // store id for update payload
+        this.editingId = product?.id ?? product?.productId ?? null;
+        // keep original category to match against loaded list later
+        this.originalCategoryIdOrValue = product?.category_id ?? product?.category?.id ?? product?.category;
+        this.originalCategoryName = (product?.category?.name ?? product?.category ?? '').toString();
+        // prefill basic fields
+        this.form.patchValue({
+          category_id: this.originalCategoryIdOrValue,
+          name: product?.name || '',
+          image: product?.image || '',
+          description: product?.description || '',
+          prepration_time: Number(product?.prepration_time ?? product?.preparation_time ?? 0) || null,
+          isAvailable: String(product?.isAvailable ?? '').toString() === '1' ? true : !!product?.isAvailable,
+          hasVariant: Array.isArray(product?.sizeType) && product.sizeType.length > 0,
+        });
+        // preview existing main image
+        if (product?.image) {
+          this.previewUrl = (typeof product.image === 'string') ? (product.image.startsWith('http') ? product.image : (environment?.imgUrl ? environment.imgUrl + product.image : product.image)) : null;
+        }
+        // prefill gallery previews from paths
+        const gal = Array.isArray(product?.gallery) ? product.gallery : [];
+        this.galleryPreviews = gal.map((g: any) => {
+          const path = (g?.image ?? g) as string;
+          return (typeof path === 'string') ? ((environment?.imgUrl ? environment.imgUrl : '') + path) : '';
+        }).filter(Boolean);
+        // also set gallery form controls to raw paths so backend can keep them if unchanged
+        const galleryFA = this.gallery;
+        while (galleryFA.length) galleryFA.removeAt(0);
+        for (const g of gal) {
+          const path = (g?.image ?? g) as string;
+          galleryFA.push(this.fb.control(path));
+        }
+        // prefill sizeType
+        while (this.sizeType.length) this.sizeType.removeAt(0);
+        if (Array.isArray(product?.sizeType) && product.sizeType.length) {
+          for (const s of product.sizeType) {
+            this.sizeType.push(this.fb.group({
+              type: [s?.type || '', Validators.required],
+              cost: [s?.cost ?? '', [Validators.required]],
+              sale: [s?.sale ?? s?.price ?? '', [Validators.required]],
+            }));
+          }
+        } else {
+          // keep one default row
+          this.addSizeType();
+        }
+      }
+    } catch {}
+  }
+
+  private resolveCategorySelection(): void {
+    if (!this.isUpdateMode || !this.categories || !this.categories.length) return;
+    const ctrl = this.form.get('category_id');
+    if (!ctrl) return;
+    const wantIdOrValue = this.originalCategoryIdOrValue;
+    const wantName = (this.originalCategoryName || '').toLowerCase().trim();
+    let matched: any = null;
+    for (const c of this.categories) {
+      const value = (c?.id ?? c?._id ?? c?.categoryId ?? c?.value ?? c);
+      const label = (c?.name ?? c?.category ?? c?.title ?? c ?? '').toString();
+      if (wantIdOrValue != null && String(value) === String(wantIdOrValue)) { matched = value; break; }
+      if (wantName && label && label.toLowerCase().trim() === wantName) { matched = value; break; }
+    }
+    if (matched != null) {
+      ctrl.setValue(matched, { emitEvent: false });
+    }
   }
 
   private buildForm() {
@@ -37,7 +127,7 @@ export class AddProductComponent implements OnInit {
       name: ['', [Validators.required, Validators.minLength(2)]],
       image: ['', Validators.required], // will store base64
       description: [''],
-      preparation_time: [null, [Validators.required, Validators.min(1)]],
+      prepration_time: [null, [Validators.required, Validators.min(1)]],
       isAvailable: [true],
       hasVariant: [false],
       gallery: this.fb.array([] as any[]),
@@ -47,6 +137,10 @@ export class AddProductComponent implements OnInit {
 
   get sizeType(): FormArray<FormGroup> {
     return this.form.get('sizeType') as FormArray<FormGroup>;
+  }
+
+  get hasVariant(): boolean {
+    return !!this.form?.get('hasVariant')?.value;
   }
 
   get gallery(): FormArray {
@@ -63,6 +157,11 @@ export class AddProductComponent implements OnInit {
   }
 
   removeSizeType(index: number) {
+    // Always enforce at least one size row present
+    if (this.sizeType.length <= 1) {
+      this.toast.error('At least one size is required');
+      return;
+    }
     this.sizeType.removeAt(index);
   }
 
@@ -73,6 +172,8 @@ export class AddProductComponent implements OnInit {
         const data = Array.isArray(res) ? res : (res?.data || res?.categories || []);
         this.categories = data;
         this.loadingCategories = false;
+        // ensure category select reflects the product's category in edit mode
+        this.resolveCategorySelection();
       },
       error: (err: any) => {
         this.loadingCategories = false;
@@ -153,21 +254,35 @@ export class AddProductComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-
-    const payload = { ...this.form.value };
+    // Ensure we have at least one size row regardless of hasVariant
+    if (this.sizeType.length === 0) {
+      this.toast.error('Please add at least one size');
+      return;
+    }
+    const payload = { ...this.form.value } as any;
+    // normalize category_id from possible shapes (id, object, string)
+    const cat = payload.category_id;
+    if (cat && typeof cat === 'object') {
+      payload.category_id = cat.id ?? cat._id ?? cat.categoryId ?? cat.value ?? cat.name ?? cat;
+    }
+    // include id for update
+    if (this.isUpdateMode && this.editingId != null) {
+      payload.id = this.editingId;
+    }
     // Ensure image is pure base64 without header
     payload.image = this.stripDataUrlHeader(payload.image);
     // `gallery` entries are already stripped base64 strings
     this.submitting = true;
-    this.productService.addProduct(payload).subscribe({
+    const req$ = this.isUpdateMode ? this.productService.updateProduct(payload) : this.productService.addProduct(payload);
+    req$.subscribe({
       next: () => {
         this.submitting = false;
-        this.toast.success('Product added successfully');
+        this.toast.success(this.isUpdateMode ? 'Product updated successfully' : 'Product added successfully');
         this.router.navigate(['/products/categories']);
       },
       error: (err: any) => {
         this.submitting = false;
-        const msg = err?.error?.message || 'Failed to add product';
+        const msg = err?.error?.message || (this.isUpdateMode ? 'Failed to update product' : 'Failed to add product');
         this.toast.error(msg);
       },
     });

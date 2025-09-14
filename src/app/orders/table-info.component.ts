@@ -53,6 +53,8 @@ export class TableInfoComponent implements OnInit {
   ridersError: string | null = null;
   // Update mode flag
   isUpdateMode = false;
+  // Role-based restriction: waiter can only do dine-in
+  isWaiter = false;
 
   constructor(
     private fb: FormBuilder,
@@ -84,13 +86,27 @@ public ordertkrid:any;
       rider_id: [null],
       sgst: [0],
       cgst: [0],
-      preparation_time: [0, [Validators.min(0)]],
       orderDetails: this.fb.array([]),
     });
+
+    // Determine current user role from localStorage and set waiter flag
+    try {
+      const raw = localStorage.getItem('auth');
+      if (raw) {
+        const u = JSON.parse(raw);
+        const roleStr = (u?.role || u?.user?.role || '').toString().toLowerCase();
+        this.isWaiter = roleStr.includes('waiter');
+      }
+    } catch {}
 
     // Keep orderType in sync with delivery_type radio
     const delCtrl = this.form.get('delivery_type');
     delCtrl?.valueChanges.subscribe((val: string) => {
+      // Enforce dine-in for waiter
+      if (this.isWaiter && val === 'delivery') {
+        delCtrl.setValue('dine-in', { emitEvent: false });
+        val = 'dine-in';
+      }
       const mapped = val === 'delivery' ? 'delivery' : 'table';
       this.form.patchValue({ orderType: mapped }, { emitEvent: false });
       const addrCtrl = this.form.get('address');
@@ -114,13 +130,17 @@ public ordertkrid:any;
       this.onRecalc();
     });
     // Initialize mapping and validators once
-    this.form.patchValue({ orderType: this.form.value.delivery_type === 'delivery' ? 'delivery' : 'table' }, { emitEvent: false });
+    if (this.isWaiter) {
+      this.form.patchValue({ delivery_type: 'dine-in', orderType: 'table' }, { emitEvent: false });
+    } else {
+      this.form.patchValue({ orderType: this.form.value.delivery_type === 'delivery' ? 'delivery' : 'table' }, { emitEvent: false });
+    }
     {
       const val = this.form.value.delivery_type;
       const addrCtrl = this.form.get('address');
       const feeCtrl = this.form.get('delivery_fee');
       const riderCtrl = this.form.get('rider_id');
-      if (val === 'delivery') {
+      if (!this.isWaiter && val === 'delivery') {
         addrCtrl?.addValidators(Validators.required);
         riderCtrl?.addValidators(Validators.required);
         // prime riders list
@@ -399,6 +419,8 @@ public ordertkrid:any;
         qty: [qty],
         cost: [0],
         sale: [this.priceOfProduct(product)],
+        // carry product preparation time if provided
+        preparation_time: [Number((product?.preparation_time ?? product?.preparationTime ?? product?.prep_time) || 0)],
         note: [''],
       }));
     }
@@ -507,13 +529,14 @@ public ordertkrid:any;
         rider_id: v.rider_id ?? null,
         sgst: Number(v.sgst) || 0,
         cgst: Number(v.cgst) || 0,
-        preparation_time: Number(v.preparation_time) || 0,
         orderDetails: (this.orderDetails.value || []).map((r: any, i: number) => ({
-          id: r.id || i + 1,
+          id: r.id,
           product_id: r.product_id,
           size: r.size,
+          quantity: Number(r.qty) || 0,
           cost: Number(r.cost) || 0,
           sale: Number(r.sale) || 0,
+          preparation_time: Number(r.preparation_time) || 0,
           note: r.note || '',
         })),
       };
@@ -530,6 +553,10 @@ public ordertkrid:any;
         all[idx] = updated;
         await this.idb.replaceAll('orders', all);
         this.toast.success('Saved offline. Will sync when back online.');
+        // Signal new order for header bell dot (only for creation)
+        if (!this.isUpdateMode) {
+          try { localStorage.setItem('hasNewOrder', '1'); } catch {}
+        }
         await this.playOrderBell();
         this.router.navigate(['/orders/list']);
         return;
@@ -544,6 +571,11 @@ public ordertkrid:any;
         } else {
           apiRes = await firstValueFrom(this.orderService.addOrder(payload));
           this.toast.success('Order Placed');
+          if(this.isWaiter){
+            this.router.navigate(['/orders/add']);
+          }
+          // Signal new order for header bell dot
+          try { localStorage.setItem('hasNewOrder', '1'); } catch {}
         }
         await this.playOrderBell();
       } catch (e:any) {
@@ -558,6 +590,10 @@ public ordertkrid:any;
         all[idx] = updatedOffline;
         await this.idb.replaceAll('orders', all);
         this.toast.success('Saved offline. Will sync when back online.');
+        // Signal new order for header bell dot (only for creation)
+        if (!this.isUpdateMode) {
+          try { localStorage.setItem('hasNewOrder', '1'); } catch {}
+        }
         await this.playOrderBell();
         this.router.navigate(['/orders/list']);
         return;

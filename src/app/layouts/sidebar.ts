@@ -90,7 +90,9 @@ export class SidebarComponent {
         try {
             const auth = await this.storage.get<any>('auth')
               ?? JSON.parse(localStorage.getItem('auth') || 'null');
-            this.role = auth.data[0].role;
+            // support either object or array payloads
+            const rawRole = (Array.isArray(auth?.data) ? auth?.data?.[0]?.role : (auth?.role ?? auth?.user?.role)) as any;
+            this.role = rawRole as Role;
         } catch {
             this.role = null;
         }
@@ -101,8 +103,8 @@ export class SidebarComponent {
     }
 
     get canViewOrders(): boolean {
-        // manager, admin
-        return this.role === Role.Manager || this.role === Role.Admin || this.role === null;
+        // manager, admin, cook
+        return this.role === Role.Manager || this.role === Role.Admin || this.role === Role.Cook || this.role === null;
     }
 
     get isWaiter(): boolean {
@@ -115,5 +117,9 @@ export class SidebarComponent {
 
     get isAdmin(): boolean {
         return this.role === Role.Admin;
+    }
+
+    get isCook(): boolean {
+        return this.role === Role.Cook;
     }
 }

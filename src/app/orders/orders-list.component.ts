@@ -22,12 +22,26 @@ export class OrdersListComponent implements OnInit, OnDestroy {
   search = '';
   // order type filter tab: 'all' | 'delivery' | 'dine-in'
   selectedTab: 'all' | 'delivery' | 'dine-in' = 'all'; 
+  // auth role
+  currentRole: string | null = null;
 
   private onlineHandler = () => this.syncPending().catch(() => {});
 
   constructor(private orderService: OrderService, private idb: IdbService, private toast: ToastService, private router: Router) {}
 
   ngOnInit(): void {
+    // read current role from localStorage('auth')
+    try {
+      const raw = localStorage.getItem('auth');
+      if (raw) {
+        const u = JSON.parse(raw);
+        this.currentRole = (u?.role || '').toString().toLowerCase();
+        if (this.isCook) {
+          // cooks cannot update status; remove options entirely in UI
+          this.statusOptions = [] as any;
+        }
+      }
+    } catch {}
     this.fetchOrders();
     // attempt a sync on load and when connection comes back
     this.syncPending().catch(() => {});
@@ -41,6 +55,10 @@ export class OrdersListComponent implements OnInit, OnDestroy {
   get filtered(): any[] {
     // 1) apply type tab
     let list = (this.orders || []);
+    // cooks can only see orders with status Cooking
+    if (this.isCook) {
+      list = list.filter((o: any) => o.status === OrderStatus.Cooking);
+    }
     if (this.selectedTab === 'delivery') {
       list = list.filter((o: any) => (o.orderType === 'delivery'));
     } else if (this.selectedTab === 'dine-in') {
@@ -130,6 +148,10 @@ export class OrdersListComponent implements OnInit, OnDestroy {
   }
 
   openUpdate(card: any): void {
+    if (this.isCook) {
+      // cooks cannot update order details, just ignore
+      return;
+    }
     const src = card?.raw || {};
     // Prefer server orderDetails if available
     const details: any[] = Array.isArray(src.orderItems)
@@ -173,6 +195,7 @@ export class OrdersListComponent implements OnInit, OnDestroy {
   }
 
   startEditStatus(orderId: any) {
+    if (this.isCook) return; // cooks cannot edit status
     this.editingStatusId = orderId;
   }
 
@@ -183,6 +206,8 @@ export class OrdersListComponent implements OnInit, OnDestroy {
   applyStatus(order: any, newStatus: string) {
     const prev = order.status;
     const normalized = this.normalizeStatus(newStatus);
+    // cooks cannot change status at all
+    if (this.isCook) return;
     // If cancelling, delete the order via API
     if (normalized === OrderStatus.Cancel) {
       this.orderService.deleteOrder(order.id).subscribe({
@@ -224,6 +249,10 @@ export class OrdersListComponent implements OnInit, OnDestroy {
     if (s === 'paid' || s === 'pay' || s === 'payment') return OrderStatus.Paid;
     if (s === 'cancel' || s === 'cancell' || s === 'cancelled' || s === 'canceled') return OrderStatus.Cancel;
     return OrderStatus.Pending;
+  }
+
+  get isCook(): boolean {
+    return (this.currentRole || '') === 'cook';
   }
 
   // ------- Offline sync for pending orders saved in IndexedDB -------

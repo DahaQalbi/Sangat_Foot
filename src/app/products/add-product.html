@@ -1,6 +1,6 @@
 <div class="panel">
   <div class="mb-5 flex items-center justify-between">
-    <h5 class="text-lg font-extrabold text-red-600">Add Product</h5>
+    <h5 class="text-lg font-extrabold text-red-600">{{ isUpdateMode ? 'Update Menu' : 'Add Menu' }}</h5>
     <a routerLink="/products/categories" class="btn btn-danger">Back to Categories</a>
   </div>
 
@@ -42,10 +42,10 @@
     <!-- Preparation Time -->
     <div>
       <label class="mb-1 block font-medium">Preparation Time (minutes)</label>
-      <input type="number" min="1" inputmode="numeric" class="form-input w-full" placeholder="e.g. 15" formControlName="preparation_time" />
-      <div class="mt-1 text-xs text-danger" *ngIf="form.get('preparation_time')?.touched && form.get('preparation_time')?.errors">
-        <div *ngIf="form.get('preparation_time')?.errors?.['required']">Preparation time is required.</div>
-        <div *ngIf="form.get('preparation_time')?.errors?.['min']">Must be at least 1 minute.</div>
+      <input type="number" min="1" inputmode="numeric" class="form-input w-full" placeholder="e.g. 15" formControlName="prepration_time" />
+      <div class="mt-1 text-xs text-danger" *ngIf="form.get('prepration_time')?.touched && form.get('prepration_time')?.errors">
+        <div *ngIf="form.get('prepration_time')?.errors?.['required']">Preparation time is required.</div>
+        <div *ngIf="form.get('prepration_time')?.errors?.['min']">Must be at least 1 minute.</div>
       </div>
     </div>
 
@@ -130,31 +130,28 @@
       <input #galleryInput type="file" accept="image/*" class="hidden" multiple (change)="onGalleryChange($event)" />
     </div>
 
-    <!-- Size Type rows -->
-    <div formArrayName="sizeType">
-      <!-- Variants toggle -->
-      <div class="mb-2 flex items-center gap-2">
-        <input id="variants" type="checkbox" class="form-checkbox" formControlName="hasVariant" />
-        <label for="variants" class="select-none">Has variants</label>
-      </div>
-      <div class="mb-2 flex items-center justify-between">
-        <label class="font-medium">Sizes</label>
-        <button type="button" class="btn btn-primary" (click)="addSizeType()">+ Add Item</button>
-      </div>
+    <!-- Variants toggle -->
+    <div class="mb-2 flex items-center gap-2">
+      <input id="variants" type="checkbox" class="form-checkbox" formControlName="hasVariant" />
+      <label for="variants" class="select-none">Has variants</label>
+    </div>
 
+    <!-- Size Type rows -->
+    <div class="mb-2 flex items-center justify-between">
+      <label class="font-medium">Sizes</label>
+      <button *ngIf="hasVariant" type="button" class="btn btn-primary" (click)="addSizeType()">+ Add Item</button>
+    </div>
+
+    <div formArrayName="sizeType">
       <div *ngFor="let ctrl of sizeType.controls; let i = index" class="mb-3">
         <app-size-type-row [group]="$any(ctrl)" [index]="i" (remove)="removeSizeType(i)"></app-size-type-row>
-      </div>
-
-      <div class="mt-1 text-xs text-danger" *ngIf="sizeType.length === 0">
-        Add at least one size.
       </div>
     </div>
 
     <div class="pt-2">
       <button type="submit" class="btn btn-primary" [disabled]="submitting">
-        <span *ngIf="!submitting">Add Product</span>
-        <span *ngIf="submitting">Saving...</span>
+        <span *ngIf="!submitting">{{ isUpdateMode ? 'Update Menu' : 'Add Menu' }}</span>
+        <span *ngIf="submitting">{{ isUpdateMode ? 'Updating...' : 'Adding...' }}</span>
       </button>
     </div>
   </form>

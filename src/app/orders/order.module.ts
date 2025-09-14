@@ -14,7 +14,7 @@ import { PaidOrdersComponent } from './paid-orders.component';
 const routes: Routes = [
   { path: '', redirectTo: 'add', pathMatch: 'full' },
   { path: 'add', component: AddOrderComponent, canActivate: [RoleGuard], data: { title: 'Add Order', roles: [Role.Waiter, Role.Manager, Role.Admin] } },
-  { path: 'list', component: OrdersListComponent, canActivate: [RoleGuard], data: { title: 'All Orders', roles: [Role.Manager, Role.Admin] } },
+  { path: 'list', component: OrdersListComponent, canActivate: [RoleGuard], data: { title: 'All Orders', roles: [Role.Cook, Role.Manager, Role.Admin] } },
   { path: 'completed', component: CompletedOrdersComponent, canActivate: [RoleGuard], data: { title: 'Completed Orders', roles: [Role.Manager, Role.Admin] } },
   { path: 'paid', component: PaidOrdersComponent, canActivate: [RoleGuard], data: { title: 'Paid Orders', roles: [Role.Manager, Role.Admin] } },
   { path: 'table', component: TableInfoComponent, canActivate: [RoleGuard], data: { title: 'Table Details', roles: [Role.Waiter, Role.Manager, Role.Admin] } },

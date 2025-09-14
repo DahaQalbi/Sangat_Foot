@@ -26,7 +26,7 @@
                             </div>
                         </a>
                     </li>
-                    <li class="menu nav-item">
+                    <li class="menu nav-item" *ngIf="canAddOrder && !isCook">
                         <a routerLink="/orders/add" class="nav-link group" routerLinkActive="active" (click)="toggleMobileMenu()">
                             <div class="flex items-center">
                                 <!-- POS terminal icon -->
@@ -49,7 +49,7 @@
                             </div>
                         </a>
                     </li>
-                    <li class="accordion menu nav-item">
+                    <li class="accordion menu nav-item" *ngIf="canViewOrders">
                         <button
                             type="button"
                             class="nav-link group w-full"
@@ -77,13 +77,13 @@
                         </button>
                         <div [@slideDownUp]="!activeDropdown.includes('orders')" class="accordion-content">
                             <ul class="sub-menu text-gray-500">
-                                <li *ngIf="!isWaiter">
+                                <li>
                                     <a routerLink="/orders/list" routerLinkActive="active" (click)="toggleMobileMenu()">All Orders</a>
                                 </li>
-                                <li *ngIf="!isWaiter">
+                                <li *ngIf="!isCook">
                                     <a routerLink="/orders/completed" routerLinkActive="active" (click)="toggleMobileMenu()">Completed Orders</a>
                                 </li>
-                                <li *ngIf="!isWaiter">
+                                <li *ngIf="!isCook">
                                     <a routerLink="/orders/paid" routerLinkActive="active" (click)="toggleMobileMenu()">Paid Orders</a>
                                 </li>
                             </ul>

@@ -20,7 +20,8 @@ export class BoxedSigninComponent {
     store: any;
     // Reactive form state
     loginForm!: FormGroup;
-    roles: Role[] = Object.values(Role);
+    // Limit roles shown on login to only: cook, manager, waiter, admin
+    roles: Role[] = [Role.Cook, Role.Manager, Role.Waiter, Role.Admin];
     submitting = false;
     errorMsg = '';
     // Default and environment logo handling for login page

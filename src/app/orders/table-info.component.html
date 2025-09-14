@@ -1,7 +1,7 @@
 <div class="panel max-w-5xl mx-auto">
   <div class="flex items-center justify-between mb-4" [formGroup]="form">
     <div class="flex gap-3" *ngIf="!isUpdateMode">
-      <label class="inline-flex items-center gap-2 p-2 rounded border"
+      <label class="inline-flex items-center gap-2 p-2 rounded border" *ngIf="!isWaiter"
              [ngClass]="form.value.delivery_type==='delivery' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'">
         <input type="radio" class="form-radio" name="delivery_type" value="delivery" formControlName="delivery_type" (change)="onRecalc()" />
         <span>Delivery</span>
@@ -29,10 +29,7 @@
         <label class="mb-1 block text-sm font-medium">Delivery Fee</label>
         <input type="number" class="form-input w-full" formControlName="delivery_fee" (input)="onRecalc()" placeholder="0" />
       </div>
-      <div>
-        <label class="mb-1 block text-sm font-medium">Preparation Time (min)</label>
-        <input type="number" class="form-input w-full" formControlName="preparation_time" min="0" placeholder="0" />
-      </div>
+      
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4" *ngIf="form.value.delivery_type==='delivery'">

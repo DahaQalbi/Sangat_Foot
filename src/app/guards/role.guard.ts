@@ -21,7 +21,10 @@ export class RoleGuard implements CanActivate {
       if (role && allowed.includes(role)) return true;
       // If we have auth but couldn't determine role, block access to protected routes
       if (!role) return this.router.parseUrl('/');
-      // Not allowed explicitly: redirect to home
+      // Not allowed explicitly
+      if (role === Role.Cook) {
+        return this.router.parseUrl('/orders/list');
+      }
       return this.router.parseUrl('/');
     } catch {
       return this.router.parseUrl('/auth/boxed-signin');
@@ -47,6 +50,7 @@ export class RoleGuard implements CanActivate {
       if (raw === 'admin') return Role.Admin;
       if (raw === 'manager') return Role.Manager;
       if (raw === 'waiter') return Role.Waiter;
+      if (raw === 'cook') return Role.Cook;
     }
     if (Array.isArray(auth?.user?.roles)) {
       for (const r of auth.user.roles) {
@@ -54,6 +58,7 @@ export class RoleGuard implements CanActivate {
         if (name === 'admin') return Role.Admin;
         if (name === 'manager') return Role.Manager;
         if (name === 'waiter') return Role.Waiter;
+        if (name === 'cook') return Role.Cook;
       }
     }
     return null;

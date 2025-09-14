@@ -16,9 +16,22 @@ import { AuthService } from 'src/app/services/auth.service';
 export class HeaderComponent {
     store: any;
     search = false;
+    // When true, hide all header icons/menus except the bell notifications
+    showOnlyBell = true;
+    // When true, the DP dropdown will only show the Sign Out item
+    showOnlySignOut = true;
     // Default and environment logo handling
     readonly defaultLogo = '/assets/images/logo.svg';
     logoSrc: string = (environment.logo && environment.logo.trim()) ? environment.logo : this.defaultLogo;
+    // User info from localStorage('auth')
+    userName: string | null = null;
+    userEmail: string | null = null;
+    userRole: string | null = null;
+    userPhone: string | null = null;
+    userImageSrc: string = '/assets/images/user-profile.jpeg';
+    userInitials: string = 'US';
+    // Show a green dot on bell when a new order has been placed
+    newOrderDot = false;
 
     notifications = [
         {
@@ -89,6 +102,40 @@ export class HeaderComponent {
     ) {
         this.initStore();
     }
+
+    private loadUserFromLocalStorage() {
+        try {
+            const raw = localStorage.getItem('auth');
+            if (!raw) return;
+            const u = JSON.parse(raw);
+            this.userName = (u?.name ?? '') || null;
+            this.userEmail = (u?.email ?? '') || null;
+            this.userRole = (u?.role ?? '') || null;
+            this.userPhone = (u?.phone ?? '') || null;
+            this.userInitials = this.computeInitials(this.userName || '');
+            const img = (u?.image ?? '') || '';
+            if (img) {
+                const isAbs = /^https?:\/\//i.test(img);
+                this.userImageSrc = isAbs ? img : img.startsWith('/') ? img : `${environment.imgUrl || ''}${img}`;
+            }
+        } catch {}
+    }
+
+    private computeInitials(name: string): string {
+        const n = (name || '').trim();
+        if (!n) return 'US';
+        const parts = n.split(/\s+/).filter(Boolean);
+        if (parts.length === 1) {
+            return parts[0].slice(0, 2).toUpperCase();
+        }
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+
+    private loadNewOrderDot() {
+        try {
+            this.newOrderDot = localStorage.getItem('hasNewOrder') === '1';
+        } catch { this.newOrderDot = false; }
+    }
     onLogoError() {
         if (this.logoSrc !== this.defaultLogo) {
             this.logoSrc = this.defaultLogo;
@@ -103,6 +150,8 @@ export class HeaderComponent {
     }
 
     ngOnInit() {
+        this.loadUserFromLocalStorage();
+        this.loadNewOrderDot();
         this.setActiveDropdown();
         this.router.events.subscribe((event) => {
             if (event instanceof NavigationEnd) {
@@ -156,5 +205,11 @@ export class HeaderComponent {
             await this.auth.logout();
         } catch {}
         this.router.navigate(['/auth/boxed-signin']);
+    }
+
+    gotoOrders() {
+        try { localStorage.removeItem('hasNewOrder'); } catch {}
+        this.newOrderDot = false;
+        this.router.navigate(['/orders/list']);
     }
 }

@@ -1,8 +1,16 @@
 <div class="p-6">
   <div class="mx-auto w-full max-w-[900px]">
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h1 class="text-2xl font-extrabold uppercase text-primary">All Staff</h1>
-      <button type="button" (click)="openAddSidebar()" class="btn !bg-red-600 hover:!bg-red-700 text-white uppercase shadow-[0_10px_20px_-10px_rgba(239,68,68,0.44)]">Add Member</button>
+      <div class="flex w-full gap-2 sm:w-auto sm:items-center flex-wrap sm:flex-nowrap">
+        <div class="relative flex-1 min-w-[200px] sm:min-w-[280px] sm:w-96">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/></svg>
+          </span>
+          <input [(ngModel)]="search" [ngModelOptions]="{standalone:true}" type="text" class="form-input w-full pl-9" placeholder="Search by name, email, phone or role" />
+        </div>
+        <button type="button" (click)="openAddSidebar()" class="btn !bg-red-600 hover:!bg-red-700 text-white uppercase shadow-[0_10px_20px_-10px_rgba(239,68,68,0.44)] w-full sm:w-auto whitespace-nowrap">Add Member</button>  
+      </div>
     </div>
 
     <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading managers...</div>
@@ -10,15 +18,7 @@
 
     <div *ngIf="!loading && !error">
       <!-- Search bar -->
-      <div class="mb-4 flex items-center gap-2">
-        <div class="relative w-full max-w-sm">
-          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/></svg>
-          </span>
-          <input [(ngModel)]="search" [ngModelOptions]="{standalone:true}" type="text" class="form-input w-full pl-9" placeholder="Search by name, email, phone or role" />
-        </div>
-        <button type="button" class="btn btn-outline-primary" (click)="search=''">Clear</button>
-      </div>
+     
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 rounded-md overflow-hidden shadow">
           <thead class="bg-gray-50 dark:bg-[#0e1726]">
@@ -140,7 +140,7 @@
                 </ng-container>
                 <ng-template #edAgreementPlaceholder>
                   <div class="flex flex-col items-center justify-center w-full h-full">
-                    <svg class="w-12 h-12 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2H4zm3 4a2 2 0 110-4 2 2 0 010 4zm13 8H4l4-6 3 4 2-3 7 5z"/></svg>
+                    <svg class="w-12 h-12 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3 4a2 2 0 110-4 2 2 0 010 4zm13 8H4l4-6 3 4 2-3 7 5z"/></svg>
                   </div>
                 </ng-template>
                 <span class="absolute -top-3 -right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-300 shadow border border-gray-200">

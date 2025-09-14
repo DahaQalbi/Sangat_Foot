@@ -72,6 +72,17 @@ export class AddOrderComponent {
     this.initLoad();
   }
 
+  // Normalize a gallery entry to an image path string
+  gallerySrc(g: unknown): string {
+    try {
+      const obj: any = g as any;
+      const path: string = (obj?.image ?? obj?.src ?? obj?.path ?? obj?.url ?? obj) as string;
+      return this.imgUrl + String(path || '');
+    } catch {
+      return this.fallbackImg;
+    }
+  }
+
   // Improve ngFor performance to avoid unnecessary image rerenders
   trackByProductId(index: number, p: any): string | number {
     return p?.productId ?? p?.id ?? index;

@@ -1,4 +1,5 @@
 import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, HostListener } from '@angular/core';
+import { Router } from '@angular/router';
 import { ProductService } from 'src/app/services/product.service';
 import { IdbService } from 'src/app/services/idb.service';
 import { ToastService } from 'src/app/services/toast.service';
@@ -23,7 +24,23 @@ public imgUrl=environment.imgUrl;
     private productService: ProductService,
     private toast: ToastService,
     private idb: IdbService,
+    private router: Router,
   ) {}
+
+  // Normalize gallery entry to image src string
+  gallerySrc(g: unknown): string {
+    try {
+      const obj: any = g as any;
+      const path: string = (obj?.image ?? obj?.src ?? obj?.path ?? obj?.url ?? obj) as string;
+      return this.imgUrl + String(path || '');
+    } catch {
+      return '';
+    }
+  }
+
+  onEdit(p: any): void {
+    this.router.navigate(['/products/add-product'], { state: { product: p, isUpdate: true } });
+  }
 
   async ngOnInit(): Promise<void> {
     await this.loadFromCache();

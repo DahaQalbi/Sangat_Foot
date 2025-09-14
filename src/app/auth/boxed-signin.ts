@@ -84,7 +84,7 @@ export class BoxedSigninComponent {
                 try {
                     // Persist raw response
                     await this.storage.set('auth', res);
-                    localStorage.setItem('auth', JSON.stringify(res));
+                    localStorage.setItem('auth', JSON.stringify(res.data[0]));
                     // Verify by reading back from IndexedDB and logging
                     try {
                         const authBack = await this.storage.get('auth');

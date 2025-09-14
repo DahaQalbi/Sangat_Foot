@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { OrderService } from 'src/app/services/order.service';
 import { IdbService } from 'src/app/services/idb.service';
@@ -24,7 +25,7 @@ export class OrdersListComponent implements OnInit, OnDestroy {
 
   private onlineHandler = () => this.syncPending().catch(() => {});
 
-  constructor(private orderService: OrderService, private idb: IdbService, private toast: ToastService) {}
+  constructor(private orderService: OrderService, private idb: IdbService, private toast: ToastService, private router: Router) {}
 
   ngOnInit(): void {
     this.fetchOrders();
@@ -124,7 +125,51 @@ export class OrdersListComponent implements OnInit, OnDestroy {
       customer: o?.customerName || o?.customer || 'Guest',
       waiter: o?.waiterName || o?.waiter || '',
       orderType,
+      raw: o,
     };
+  }
+
+  openUpdate(card: any): void {
+    const src = card?.raw || {};
+    // Prefer server orderDetails if available
+    const details: any[] = Array.isArray(src.orderItems)
+      ? src.orderItems
+      : (Array.isArray(src.orderDetails) ? src.orderDetails : (Array.isArray(src.items) ? src.items : []));
+    const items = (details || []).map((d: any) => {
+      const qty = Number(d?.qty ?? d?.quantity ?? 1) || 1;
+      const productId = d?.product_id ?? d?.productId ?? d?.id ?? null;
+      const name = d?.name || d?.product_name || 'Item';
+      const category = d?.category || (d?.product?.category?.name || d?.product?.category || '');
+      const type = d?.size || d?.selectedSize?.type || 'Default';
+      const sale = Number(d?.sale ?? d?.price ?? d?.selectedSize?.sale ?? 0) || 0;
+      const cost = Number(d?.cost ?? d?.selectedSize?.cost ?? 0) || 0;
+      return { qty, productId, name, category, selectedSize: { type, sale, cost } };
+    });
+    const totalsale = items.reduce((a, r) => a + (r.selectedSize.sale * r.qty), 0);
+    const totalcost = items.reduce((a, r) => a + (r.selectedSize.cost * r.qty), 0);
+    const summary = { items, totalsale, totalcost };
+
+    // Prefill top-level fields for Table Info form
+    const deliveryTypeRaw = (src?.delivery_type ?? src?.orderType ?? '').toString().toLowerCase();
+    const delivery_type = deliveryTypeRaw.includes('delivery') ? 'delivery' : 'dine-in';
+    const prefill: any = {
+      tableNo: src?.tableNo ?? src?.table ?? '',
+      orderType: delivery_type === 'delivery' ? 'delivery' : 'table',
+      delivery_type,
+      discount: Number(src?.discount) || 0,
+      cost: Number(src?.cost) || 0,
+      sale: Number(src?.sale) || totalsale,
+      net: Number(src?.net) || (totalsale - (Number(src?.discount) || 0) + (Number(src?.delivery_fee) || 0)),
+      delivery_fee: Number(src?.delivery_fee) || 0,
+      address: src?.address || '',
+      sgst: Number(src?.sgst) || 0,
+      cgst: Number(src?.cgst) || 0,
+      note: src?.note || '',
+    };
+
+    // Navigate to table info with id and summary in state
+    const id = card?.id ?? src?.id;
+    this.router.navigate(['/orders/table'], { queryParams: { id }, state: { summary, isUpdate: true, prefill } });
   }
 
   startEditStatus(orderId: any) {

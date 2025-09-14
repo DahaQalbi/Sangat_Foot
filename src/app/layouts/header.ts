@@ -6,6 +6,7 @@ import { AppService } from '../service/app.service';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
+import { AuthService } from 'src/app/services/auth.service';
 
 @Component({
     selector: 'header',
@@ -84,6 +85,7 @@ export class HeaderComponent {
         public router: Router,
         private appSetting: AppService,
         private sanitizer: DomSanitizer,
+        private auth: AuthService,
     ) {
         this.initStore();
     }
@@ -147,5 +149,12 @@ export class HeaderComponent {
             this.storeData.dispatch({ type: 'toggleRTL', payload: 'ltr' });
         }
         window.location.reload();
+    }
+
+    async onLogout() {
+        try {
+            await this.auth.logout();
+        } catch {}
+        this.router.navigate(['/auth/boxed-signin']);
     }
 }

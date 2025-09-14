@@ -41,7 +41,16 @@
               <div class="text-xs text-gray-500">Order #{{ o.id }}</div>
             </div>
           </div>
-          <span class="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-700 dark:bg-white/10 dark:text-gray-200">{{ o.orderType }}</span>
+          <div class="flex items-center gap-2">
+            <span class="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-700 dark:bg-white/10 dark:text-gray-200">{{ o.orderType }}</span>
+            <button type="button" class="grid h-7 w-7 place-items-center rounded border text-gray-600 hover:text-primary hover:border-primary"
+               (click)="openUpdate(o)" title="Update Order">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
+                <path d="M12 20h9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
           <ng-container *ngIf="editingStatusId !== o.id; else editStatusTpl">
             <button type="button" class="rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700 hover:brightness-95" *ngIf="o.status" (click)="startEditStatus(o.id)">
               {{ o.status }}

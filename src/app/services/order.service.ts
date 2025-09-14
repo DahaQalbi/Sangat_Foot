@@ -22,10 +22,16 @@ export class OrderService extends ProductService   {
   getAllDeals(): Observable<any> {
     return this.http.get<any>(this.baseUrl + 'deals');
   } 
+  deleteOrderItem(id: any): Observable<any> {
+    return this.http.delete<any>(this.baseUrl + `deleteOrderItem/${id}`);
+  } 
   getAllOrders(): Observable<any> {
     return this.http.get<any>(this.baseUrl + 'getAllOrders');
   } 
   updateOrderStatus(id: any, status: string): Observable<any> {
     return this.http.put<any>(this.baseUrl + 'updateOrderStatus', { id, status });
+  } 
+  updateOrder(data: any): Observable<any> {
+    return this.http.put<any>(this.baseUrl + 'updateOrder', data);
   } 
 }

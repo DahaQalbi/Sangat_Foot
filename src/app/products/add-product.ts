@@ -78,12 +78,12 @@ export class AddProductComponent implements OnInit {
           const path = (g?.image ?? g) as string;
           return (typeof path === 'string') ? ((environment?.imgUrl ? environment.imgUrl : '') + path) : '';
         }).filter(Boolean);
-        // also set gallery form controls to raw paths so backend can keep them if unchanged
+        // also set gallery form controls as objects so backend can keep them if unchanged
         const galleryFA = this.gallery;
         while (galleryFA.length) galleryFA.removeAt(0);
         for (const g of gal) {
           const path = (g?.image ?? g) as string;
-          galleryFA.push(this.fb.control(path));
+          galleryFA.push(this.fb.group({ image: [path] }));
         }
         // prefill sizeType
         while (this.sizeType.length) this.sizeType.removeAt(0);
@@ -130,7 +130,8 @@ export class AddProductComponent implements OnInit {
       prepration_time: [null, [Validators.required, Validators.min(1)]],
       isAvailable: [true],
       hasVariant: [false],
-      gallery: this.fb.array([] as any[]),
+      // gallery should be an array of objects like: [{ image: '<base64>' }]
+      gallery: this.fb.array([] as FormGroup[]),
       sizeType: this.fb.array([] as FormGroup[]),
     });
   }
@@ -143,8 +144,8 @@ export class AddProductComponent implements OnInit {
     return !!this.form?.get('hasVariant')?.value;
   }
 
-  get gallery(): FormArray {
-    return this.form.get('gallery') as FormArray;
+  get gallery(): FormArray<FormGroup> {
+    return this.form.get('gallery') as FormArray<FormGroup>;
   }
 
   addSizeType() {
@@ -202,7 +203,7 @@ export class AddProductComponent implements OnInit {
     const encoded = await Promise.all(files.map(f => this.toBase64(f)));
     for (const dataUrl of encoded) {
       this.galleryPreviews.push(dataUrl);
-      this.gallery.push(this.fb.control(this.stripDataUrlHeader(dataUrl)));
+      this.gallery.push(this.fb.group({ image: [this.stripDataUrlHeader(dataUrl)] }));
     }
     // Reset file input so the same files can be selected again if needed
     if (this.galleryInputRef?.nativeElement) {
@@ -271,14 +272,22 @@ export class AddProductComponent implements OnInit {
     }
     // Ensure image is pure base64 without header
     payload.image = this.stripDataUrlHeader(payload.image);
-    // `gallery` entries are already stripped base64 strings
+    // Normalize gallery to [{ image: '<base64 or path>' }, ...] and ensure base64 is stripped (keep paths as-is)
+    const galArr = Array.isArray(payload.gallery) ? payload.gallery : [];
+    payload.gallery = galArr.map((g: any) => {
+      const val = (g && typeof g === 'object') ? (g.image ?? g.path ?? g.url ?? '') : g;
+      const strVal = String(val || '');
+      // If it's a data URL, strip header; if it's raw base64 keep as-is; if it's a path keep path
+      const normalized = this.stripDataUrlHeader(strVal);
+      return { image: normalized };
+    });
     this.submitting = true;
     const req$ = this.isUpdateMode ? this.productService.updateProduct(payload) : this.productService.addProduct(payload);
     req$.subscribe({
       next: () => {
         this.submitting = false;
         this.toast.success(this.isUpdateMode ? 'Product updated successfully' : 'Product added successfully');
-        this.router.navigate(['/products/categories']);
+        this.router.navigate(['/products/all-products']);
       },
       error: (err: any) => {
         this.submitting = false;

@@ -100,6 +100,10 @@
         <div>
           <label for="edEmail">Email</label>
           <input id="edEmail" type="email" formControlName="email" placeholder="Enter Email" class="form-input placeholder:text-white-dark" />
+          <div class="mt-1 text-xs text-red-600" *ngIf="editForm.get('email')?.touched && editForm.get('email')?.errors">
+            <div *ngIf="editForm.get('email')?.errors?.['required']">Email is required.</div>
+            <div *ngIf="editForm.get('email')?.errors?.['email']">Enter a valid email address.</div>
+          </div>
         </div>
         <!-- Password -->
         <div>
@@ -111,11 +115,18 @@
         <div>
           <label for="edName">Name</label>
           <input id="edName" type="text" formControlName="name" placeholder="Enter Name" class="form-input placeholder:text-white-dark" />
+          <div class="mt-1 text-xs text-red-600" *ngIf="editForm.get('name')?.touched && editForm.get('name')?.errors">
+            <div *ngIf="editForm.get('name')?.errors?.['required']">Name is required.</div>
+            <div *ngIf="editForm.get('name')?.errors?.['minlength']">Name must be at least 2 characters.</div>
+          </div>
         </div>
         <!-- Phone -->
         <div>
           <label for="edPhone">Phone</label>
           <input id="edPhone" type="text" formControlName="phone" placeholder="Enter Phone" class="form-input placeholder:text-white-dark" />
+          <div class="mt-1 text-xs text-red-600" *ngIf="editForm.get('phone')?.touched && editForm.get('phone')?.errors">
+            <div *ngIf="editForm.get('phone')?.errors?.['required']">Phone is required.</div>
+          </div>
         </div>
         <!-- Uploads as Tiles (same as Add Member) -->
         <div>
@@ -207,10 +218,15 @@
           <select id="edRole" class="form-select" formControlName="role">
             <option *ngFor="let r of roles" [ngValue]="r">{{ r }}</option>
           </select>
+          <div class="mt-1 text-xs text-red-600" *ngIf="editForm.get('role')?.touched && editForm.get('role')?.errors">
+            <div *ngIf="editForm.get('role')?.errors?.['required']">Role is required.</div>
+          </div>
         </div>
         <!-- Actions -->
         <div class="flex gap-3 pt-2">
-          <button type="submit" [disabled]="updating || editForm.invalid" class="btn !bg-red-600 hover:!bg-red-700 text-white uppercase flex-1">
+          <button type="submit" [disabled]="updating || editForm.invalid"
+                  [ngClass]="(updating || editForm.invalid) ? 'opacity-50 cursor-not-allowed' : ''"
+                  class="btn !bg-red-600 hover:!bg-red-700 text-white uppercase flex-1">
             {{ updating ? 'Updating...' : 'Update' }}
           </button>
           <button type="button" (click)="closeUpdateSidebar()" class="btn btn-outline !bg-transparent !text-red-600 hover:!bg-red-600/10 flex-1">Cancel</button>
@@ -239,18 +255,33 @@
         <div>
           <label for="addEmail">Email</label>
           <input id="addEmail" formControlName="email" type="email" placeholder="Enter Email" class="form-input placeholder:text-white-dark" />
+          <div class="mt-1 text-xs text-red-600" *ngIf="addForm.get('email')?.touched && addForm.get('email')?.errors">
+            <div *ngIf="addForm.get('email')?.errors?.['required']">Email is required.</div>
+            <div *ngIf="addForm.get('email')?.errors?.['email']">Enter a valid email address.</div>
+          </div>
         </div>
         <div>
           <label for="addPassword">Password</label>
           <input id="addPassword" formControlName="password" type="password" placeholder="Enter Password" class="form-input placeholder:text-white-dark" />
+          <div class="mt-1 text-xs text-red-600" *ngIf="addForm.get('password')?.touched && addForm.get('password')?.errors">
+            <div *ngIf="addForm.get('password')?.errors?.['required']">Password is required.</div>
+            <div *ngIf="addForm.get('password')?.errors?.['minlength']">Password must be at least 6 characters.</div>
+          </div>
         </div>
         <div>
           <label for="addName">Name</label>
           <input id="addName" formControlName="name" type="text" placeholder="Enter Name" class="form-input placeholder:text-white-dark" />
+          <div class="mt-1 text-xs text-red-600" *ngIf="addForm.get('name')?.touched && addForm.get('name')?.errors">
+            <div *ngIf="addForm.get('name')?.errors?.['required']">Name is required.</div>
+            <div *ngIf="addForm.get('name')?.errors?.['minlength']">Name must be at least 2 characters.</div>
+          </div>
         </div>
         <div>
           <label for="addPhone">Phone</label>
           <input id="addPhone" formControlName="phone" type="text" placeholder="Enter Phone" class="form-input placeholder:text-white-dark" />
+          <div class="mt-1 text-xs text-red-600" *ngIf="addForm.get('phone')?.touched && addForm.get('phone')?.errors">
+            <div *ngIf="addForm.get('phone')?.errors?.['required']">Phone is required.</div>
+          </div>
         </div>
         <!-- Uploads as Tiles -->
         <div>
@@ -342,9 +373,14 @@
           <select id="addRole" formControlName="role" class="form-select">
             <option *ngFor="let r of roles" [ngValue]="r">{{ r }}</option>
           </select>
+          <div class="mt-1 text-xs text-red-600" *ngIf="addForm.get('role')?.touched && addForm.get('role')?.errors">
+            <div *ngIf="addForm.get('role')?.errors?.['required']">Role is required.</div>
+          </div>
         </div>
         <div class="flex gap-3">
-          <button type="submit" [disabled]="submitting" class="btn !bg-red-600 hover:!bg-red-700 text-white uppercase flex-1">
+          <button type="submit" [disabled]="submitting || addForm.invalid"
+                  [ngClass]="(submitting || addForm.invalid) ? 'opacity-50 cursor-not-allowed' : ''"
+                  class="btn !bg-red-600 hover:!bg-red-700 text-white uppercase flex-1">
             {{ submitting ? 'Adding...' : 'Add Member' }}
           </button>
           <button type="button" (click)="closeAddSidebar()" class="btn btn-outline flex-1">Cancel</button>

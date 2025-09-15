@@ -5,6 +5,7 @@ import { OrderService } from 'src/app/services/order.service';
 import { Router } from '@angular/router';
 import { OrderStatus } from './orders/order-status.enum';
 import { FinanceService } from './services/finance.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
     templateUrl: './index.html',
@@ -33,6 +34,31 @@ export class IndexComponent {
         todayEarningsDeltaPct: 0,
         todayCustomersDeltaPct: 0,
     } as any;
+public imgUrl=environment.imgUrl;
+    // Map product names to static images inside assets/images
+    private productImageMap: Record<string, string> = {};
+
+    private getProductImage(name?: string): string | undefined {
+        const key = (name || '').toLowerCase().trim();
+        if (!key) return 'assets/images/food-pattern.svg';
+        // exact match first
+        if (this.productImageMap[key]) return this.productImageMap[key];
+        // partial keyword match
+        for (const k of Object.keys(this.productImageMap)) {
+            if (key.includes(k)) return this.productImageMap[k];
+        }
+        // default generic image
+        return 'assets/images/food-pattern-light.svg';
+    }
+
+    // Safely join base URL and a (possibly relative) path
+    private joinUrl(base: string, path: string): string {
+        if (!base) return path;
+        if (!path) return base;
+        const b = base.endsWith('/') ? base.slice(0, -1) : base;
+        const p = path.startsWith('/') ? path.slice(1) : path;
+        return `${b}/${p}`;
+    }
 
     // Shape compatible with All Orders card markup
     ordersToday: Array<{
@@ -53,14 +79,6 @@ export class IndexComponent {
         this.isLoading = false;
         this.fetchDashboardOrders();
         this.getFinance();
-        // mock top-selling list
-        this.topSellingToday = [
-            { rank: 1, name: 'Hyderabadi Chicken Biryani', qty: 5, amount: 1500 },
-            { rank: 2, name: 'Chilli Paneer', qty: 5, amount: 1200 },
-            { rank: 3, name: 'Chicken Manchurian', qty: 4, amount: 1040 },
-            { rank: 4, name: 'Paneer Tikka', qty: 3, amount: 750 },
-            { rank: 5, name: 'Uttapam', qty: 5, amount: 650 },
-        ];
     }
 
     async initStore() {
@@ -99,6 +117,7 @@ public getFinance(){
       const todays_customer = Number(data?.todays_customer || 0);
       const yesterdays_customer = Number(data?.yesterdays_customer || 0);
       const monthly_report = Array.isArray(data?.monthly_report) ? data.monthly_report : [];
+      const top_products = Array.isArray(data?.top_products) ? data.top_products : [];
 
       // compute deltas safely
       const pct = (today: number, yesterday: number) => {
@@ -130,6 +149,31 @@ public getFinance(){
       const daysCount = profitSeries.length || 1;
       const totalProfit = profitSeries.reduce((a: number, b: number) => a + b, 0);
       this.stats.avgDailyEarnings = totalProfit / daysCount;
+
+      // Top products -> map to UI list; prefer API image, fall back to static image map
+      if (top_products.length) {
+        this.topSellingToday = top_products
+          .map((p: any, idx: number) => {
+            const name = String(p?.product_name || `Item ${idx + 1}`);
+            const qty = Number(p?.total_quantity || 0);
+            const amount = Number(p?.total_sale || 0);
+            const rawImg = String(p?.product_image || '').trim();
+            let image: string | undefined = undefined;
+            if (rawImg) {
+              if (/^https?:\/\//i.test(rawImg)) {
+                image = rawImg; // absolute URL from API
+              } else {
+                image = rawImg; // relative path from API
+              }
+            } else {
+              image = this.getProductImage(name); // fallback to static asset
+            }
+            return { rank: idx + 1, name, qty, amount, image };
+          })
+          // sort by total_sale desc if rank not guaranteed from API
+          .sort((a: any, b: any) => (b.amount || 0) - (a.amount || 0))
+          .map((p: any, i: number) => ({ ...p, rank: i + 1 }));
+      }
 
       // Update the monthly sales chart (Sales This Month card)
       if (this.monthlySales) {

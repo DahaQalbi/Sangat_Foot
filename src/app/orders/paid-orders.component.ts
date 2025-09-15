@@ -6,67 +6,7 @@ import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-paid-orders',
-  template: `
-  <div class="panel">
-    <div class="mb-4 flex items-center justify-between">
-      <h5 class="text-lg font-extrabold text-red-600">Paid Orders ({{ orders.length }})</h5>
-      <input type="text" class="form-input h-9 w-56" [(ngModel)]="search" placeholder="Search id, customer, table, waiter, status" />
-    </div>
-
-    <!-- Type Tabs -->
-    <div class="mb-3 flex flex-wrap items-center gap-2">
-      <button type="button"
-              class="rounded-full border px-4 py-1.5 text-sm transition"
-              [ngClass]="selectedTab==='all' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'"
-              (click)="selectedTab='all'">All</button>
-      <button type="button"
-              class="rounded-full border px-4 py-1.5 text-sm transition"
-              [ngClass]="selectedTab==='delivery' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'"
-              (click)="selectedTab='delivery'">Delivery</button>
-      <button type="button"
-              class="rounded-full border px-4 py-1.5 text-sm transition"
-              [ngClass]="selectedTab==='dine-in' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-200 dark:border-white/20'"
-              (click)="selectedTab='dine-in'">Dine-in</button>
-    </div>
-
-    <div *ngIf="loading" class="rounded border border-gray-200 p-4 dark:border-gray-700">Loading orders...</div>
-    <div *ngIf="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-transparent">{{ error }}</div>
-
-    <div *ngIf="!loading && !error">
-      <div class="text-gray-500" *ngIf="!filtered.length">No paid orders found.</div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" *ngIf="filtered.length">
-        <div *ngFor="let o of filtered" class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-[#0e1726]">
-          <div class="mb-2 flex items-start justify-between">
-            <div class="flex items-center gap-2">
-              <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700">{{ o.tableNo }}</span>
-              <div>
-                <div class="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">{{ o.customer }}</div>
-                <div class="text-xs text-gray-500">Order #{{ o.id }}</div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-700 dark:bg-white/10 dark:text-gray-200">{{ o.orderType }}</span>
-              <span class="rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700">Paid</span>
-              <button type="button" class="rounded border border-gray-300 px-2 py-1 text-[10px] font-semibold hover:bg-gray-50" (click)="printInvoice(o)">Print PDF</button>
-            </div>
-          </div>
-          <div class="mb-3 flex items-center justify-between text-xs text-gray-500">
-            <div>Order Date: {{ o.created | date:'MMM dd, yyyy hh:mm a' }}</div>
-            <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> Paid</div>
-          </div>
-          <div class="mb-4 text-xs text-gray-600" *ngIf="o.itemsCount > 0">{{ o.itemsCount }} Item(s)</div>
-          <div class="flex items-center justify-between">
-            <div class="text-sm font-semibold">Bill: {{ o.total | number:'1.0-2' }}</div>
-            <div class="flex items-center gap-2 text-xs text-gray-500">
-              <span class="i-heroicons-user-circle"></span>
-              <span>{{ o.waiter || '—' }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  `,
+  templateUrl: './paid-orders.component.html',
 })
 export class PaidOrdersComponent implements OnInit {
   loading = false;

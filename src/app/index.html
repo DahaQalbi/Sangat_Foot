@@ -113,7 +113,7 @@
                             <div class="flex items-center gap-4 min-w-0">
                                 <div class="w-8 text-sm font-semibold text-gray-400">#{{ item.rank }}</div>
                                 <div class="h-12 w-12 overflow-hidden rounded-md bg-white-light">
-                                    <img *ngIf="item.image" [src]="item.image" alt="{{ item.name }}" class="h-full w-full object-cover" />
+                                    <img *ngIf="item.image" [src]="imgUrl+item.image" alt="{{ item.name }}" class="h-full w-full object-cover" />
                                     <div *ngIf="!item.image" class="grid h-full w-full place-content-center text-xs text-gray-500">IMG</div>
                                 </div>
                                 <div class="min-w-0">

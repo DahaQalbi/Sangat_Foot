@@ -128,7 +128,7 @@ export class AppComponent  {
     if(productDb.length === 0){
       this.apiProductCall.getAllProducts().subscribe({
         next: (list) => {
-          const updatedList = list.map((item:any) => ({
+          const updatedList = list.products.map((item:any) => ({
             ...item,
             isSync: 1
           }));
@@ -283,7 +283,7 @@ export class AppComponent  {
         this.apiProductCall.getAllProducts().subscribe({
           next: (list) => {
             if(list.length > 0){
-              const updatedList = list.map((item:any) => ({
+              const updatedList = list.products.map((item:any) => ({
                 ...item,
                 isSync: 1
               }));

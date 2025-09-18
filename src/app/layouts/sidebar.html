@@ -193,6 +193,18 @@
                             </ul>
                         </div>
                     </li>
+                    <li class="menu nav-item" *ngIf="isAdmin">
+                        <a routerLink="/users/profile" class="nav-link group" routerLinkActive="active" (click)="toggleMobileMenu()">
+                            <div class="flex items-center">
+                                <!-- Staff (person) icon -->
+                                <svg class="shrink-0 h-5 w-5 text-gray-700 dark:text-[#506690] group-hover:!text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  <circle cx="12" cy="7" r="3" />
+                                  <path d="M5 20a7 7 0 0 1 14 0" />
+                                </svg>
+                                <span class="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">Profile</span>
+                            </div>
+                        </a>
+                    </li>
                     <ng-container *ngIf="isshow && isAdmin">
                     <h2 class="-mx-4 mb-1 flex items-center bg-white-light/30 px-7 py-3 font-extrabold uppercase dark:bg-dark dark:bg-opacity-[0.08]">
                         <icon-minus class="hidden h-5 w-4 flex-none" />

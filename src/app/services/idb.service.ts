@@ -16,23 +16,23 @@ export class IdbService {
     if (this.dbPromise) return this.dbPromise;
 
     this.dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open('sangat_foot', 5);
+      const req = indexedDB.open('sangat_foot', 7);
       req.onupgradeneeded = () => {
         const db = req.result;
-        if (!db.objectStoreNames.contains('waiters')) {
-          db.createObjectStore('waiters', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('managers')) {
-          db.createObjectStore('managers', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('users')) {
+          db.createObjectStore('users', { keyPath: 'id', autoIncrement: true  });
         }
         if (!db.objectStoreNames.contains('products')) {
-          db.createObjectStore('products', { keyPath: 'productId' });
+          db.createObjectStore('products', { keyPath: 'id', autoIncrement: true  });
         }
         if (!db.objectStoreNames.contains('orders')) {
-          db.createObjectStore('orders', { keyPath: 'id' });
+          db.createObjectStore('orders', { keyPath: 'id', autoIncrement: true  });
         }
-        if (!db.objectStoreNames.contains('pending_staff')) {
-          db.createObjectStore('pending_staff', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('categories')) {
+          db.createObjectStore('categories', { keyPath: 'id', autoIncrement: true  });
+        }
+        if (!db.objectStoreNames.contains('deal')) {
+          db.createObjectStore('deal', { keyPath: 'id', autoIncrement: true  });
         }
       };
       req.onsuccess = () => resolve(req.result);

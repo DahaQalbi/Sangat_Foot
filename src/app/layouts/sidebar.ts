@@ -30,7 +30,7 @@ export class SidebarComponent {
         private storage: StorageService,
     ) {
         this.initStore();
-        // Initialize role synchronously from localStorage to prevent initial flicker
+        // Initialize role synchronously from localStorage to prevent initial flicker <> </> 
         try {
             const authLS = JSON.parse(localStorage.getItem('auth') || 'null');
            this.role = authLS.data[0].role;
@@ -54,6 +54,8 @@ export class SidebarComponent {
         this.setActiveDropdown();
         this.initRole();
     }
+
+   
 
     setActiveDropdown() {
         const selector = document.querySelector('.sidebar ul a[routerLink="' + window.location.pathname + '"]');

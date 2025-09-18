@@ -16,9 +16,7 @@ export class StaffService {
   addManage(payload: AddManagePayload): Observable<any> {
     return this.http.post<any>(this.baseUrl + 'addManager', payload);
   }
-  addWaiter(payload: AddManagePayload): Observable<any> {
-    return this.http.post<any>(this.baseUrl + 'addWaiter', payload);
-  }
+
   // Fetch all managers
   getManagers(): Observable<ManagerItem[]> {
     return this.http.get<ManagerItem[]>(this.baseUrl + 'allManager');
@@ -28,6 +26,9 @@ export class StaffService {
   }
   deleteManager(id: string): Observable<any> {
     return this.http.delete<any>(this.baseUrl + `deleteManager/${id}`);
+  }
+  getManagerById(id: string): Observable<any> {
+    return this.http.get<any>(this.baseUrl + `getManagerById/${id}`);
   }
   // Fetch all waiters
   getWaiters(): Observable<ManagerItem[]> {

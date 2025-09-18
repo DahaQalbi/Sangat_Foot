@@ -170,27 +170,7 @@ export class AddStaffComponent implements OnInit {
     }
 
     this.submitting = true;
-    if (role === Role.Waiter) {
-      const waiterPayload: any = { ...payload, managerId };
-      this.staffService.addWaiter(waiterPayload).subscribe({
-        next: () => {
-          this.submitting = false;
-          this.toast.success('Waiter added successfully');
-          goAfter();
-        },
-        error: async (err) => {
-          this.submitting = false;
-          if (!err || err.status === 0) {
-            await this.staffSync.queueStaff({ ...waiterPayload, role: 'waiter' });
-            this.toast.success('No internet. Saved offline and will sync later.');
-            goAfter();
-            return;
-          }
-          const msg = err?.error?.message || 'Failed to add waiter';
-          this.toast.error(msg);
-        },
-      });
-    } else {
+ 
       const managePayload = { ...payload, role: String(role).toLowerCase() } as AddManagePayload;
       this.staffService.addManage(managePayload).subscribe({
         next: () => {
@@ -210,7 +190,7 @@ export class AddStaffComponent implements OnInit {
           this.toast.error(msg);
         },
       });
-    }
+
   }
 
   // --- Helpers ---

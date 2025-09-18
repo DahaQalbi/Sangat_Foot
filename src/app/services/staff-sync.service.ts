@@ -55,7 +55,7 @@ export class StaffSyncService {
             }
           } else {
             if (role === 'waiter') {
-              await firstValueFrom(this.staffApi.addWaiter(rec.payload));
+              await firstValueFrom(this.staffApi.addManage(rec.payload));
             } else {
               // For admin/manager/rider/cook/consumers we use addManager endpoint per current backend API surface
               await firstValueFrom(this.staffApi.addManage(rec.payload));

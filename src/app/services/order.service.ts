@@ -19,6 +19,9 @@ export class OrderService extends ProductService   {
   deleteDeal(id: any): Observable<any> {
     return this.http.delete<any>(this.baseUrl + `deleteDeal/${id}`);
   } 
+  getOrderById(id: any): Observable<any> {
+    return this.http.get<any>(this.baseUrl + `getOrderById/${id}`);
+  } 
   getAllDeals(): Observable<any> {
     return this.http.get<any>(this.baseUrl + 'deals');
   } 

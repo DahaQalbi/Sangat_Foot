@@ -33,9 +33,9 @@
 
   <!-- Product grid -->
   <div *ngIf="!loading && !error">
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <div *ngFor="let p of filteredProducts; trackBy: trackByProductId" class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-[#0e1726]">
-        <div class="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+        <div class="relative w-full overflow-hidden bg-gray-100 h-28 sm:h-36 lg:h-44">
           <img [src]="imgUrl + p.image"
                alt="{{p.name}}"
                class="h-full w-full object-cover"
@@ -49,11 +49,11 @@
             <svg *ngIf="isSelected(p)" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
             <svg *ngIf="!isSelected(p)" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
           </button>
-          <!-- Gallery thumbnails strip -->
-          <div *ngIf="p.gallery && p.gallery.length" class="absolute inset-x-0 bottom-0 flex gap-1 overflow-x-auto bg-black/30 p-1">
+          <!-- Gallery thumbnails strip (bigger thumbnails) -->
+          <div *ngIf="p.gallery && p.gallery.length" class="absolute inset-x-0 bottom-0 flex gap-0.5 overflow-x-auto bg-black/30 p-0.5">
             <img *ngFor="let g of p.gallery | slice:0:5" [src]="gallerySrc(g)"
                  (error)="onImgError($event)" alt="thumb"
-                 class="h-8 w-8 flex-none rounded object-cover ring-1 ring-white/50" />
+                 class="h-8 w-8 flex-none rounded object-cover ring-2 ring-white/60" />
           </div>
         </div>
         <div class="p-3">

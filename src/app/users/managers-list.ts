@@ -56,6 +56,24 @@ export class ManagersListComponent implements OnInit {
     this.buildAddForm();
   }
 
+  // Normalize any incoming role (enum or string) to Role enum value
+  private toRoleEnum(val: any): Role {
+    try {
+      if (Object.values(Role).includes(val)) return val as Role;
+      const s = String(val || '').toLowerCase();
+      if (s.includes('admin')) return Role.Admin;
+      if (s.includes('manager')) return Role.Manager;
+      if (s.includes('waiter')) return Role.Waiter;
+      if (s.includes('rider')) return Role.Rider;
+      if (s.includes('cook')) return Role.Cook;
+      if (s.includes('consumer')) return Role.Consumer;
+      // default to Manager for safety
+      return Role.Manager;
+    } catch {
+      return Role.Manager;
+    }
+  }
+
   // Filtered view for template
   get filteredManagers(): ManagerItem[] {
     const term = (this.search || '').toLowerCase().trim();
@@ -226,7 +244,7 @@ export class ManagersListComponent implements OnInit {
       name: [m?.name || '', [Validators.required, Validators.minLength(2)]],
       email: [m?.email || '', [Validators.required, Validators.email]],
       phone: [m?.phone || '', [Validators.required]],
-      role: [Role.Manager, [Validators.required]],
+      role: [this.toRoleEnum((m as any)?.role), [Validators.required]],
       password: [m?.password || ''], // optional; if empty keep existing
       image: [null],
       cnic: [null],
@@ -247,8 +265,8 @@ export class ManagersListComponent implements OnInit {
     const agrementUrl = this.fullUrl(agrPath || undefined);
     this.imagePreview = imageUrl;
     this.cnicPreview = cnicUrl;
-    // Seed form controls so submit has values even without new uploads
-    this.editForm.patchValue({ image: imageUrl || null, cnic: cnicUrl || null, agreement: agrementUrl || null });
+    // Seed form controls with ORIGINAL PATHS (not full URLs) so API receives relative paths
+    this.editForm.patchValue({ image: imgPath || null, cnic: cnicPath || null, agreement: agrPath || null });
     if (agrPath) {
       const ext = this.getExtension(agrPath);
       if (ext === 'pdf') {
@@ -281,12 +299,12 @@ export class ManagersListComponent implements OnInit {
     const cnicExistingPath: string | null = (this.selectedManager as any)?.cnic ?? null;
     const agrementExistingPath: string | null = (this.selectedManager as any)?.agrement ?? null;
 
-    // Compute agreement: prefer new base64, else existing full URL
+    // Compute agreement: prefer new base64, else keep existing RELATIVE PATH
     let agrement: string | null = this.selectedAgreementBase64
       || (typeof (this.editForm.value as any)?.agreement === 'object' ? (this.editForm.value as any).agreement?.image : (this.editForm.value as any)?.agreement)
       || null;
     if (!agrement) {
-      agrement = this.fullUrl(agrementExistingPath);
+      agrement = agrementExistingPath;
     }
     let extention: 'pdf' | 'image' | null = null;
     if (this.selectedAgreementBase64) {
@@ -296,11 +314,22 @@ export class ManagersListComponent implements OnInit {
       extention = ex === 'pdf' ? 'pdf' : (ex ? 'image' : null);
     }
 
-    // Prefer newly selected base64; otherwise prefix existing server paths with env imgUrl
-    const image: string | null = this.selectedImageBase64 || this.fullUrl((this.editForm.value as any)?.image || imageExistingPath);
-    const cnic: string | null = this.selectedCnicBase64 || this.fullUrl((this.editForm.value as any)?.cnic || cnicExistingPath);
+    // Prefer newly selected base64; otherwise keep RELATIVE PATH from form/existing
+    const image: string | null = this.selectedImageBase64 || (this.editForm.value as any)?.image || imageExistingPath;
+    const cnic: string | null = this.selectedCnicBase64 || (this.editForm.value as any)?.cnic || cnicExistingPath;
 
-    const roleStr = role === Role.Manager ? 'manager' : 'waiter';
+    // Map selected Role enum back to API string consistently
+    const roleStr = (() => {
+      switch (role) {
+        case Role.Admin: return 'admin';
+        case Role.Manager: return 'manager';
+        case Role.Waiter: return 'waiter';
+        case Role.Rider: return 'rider';
+        case Role.Cook: return 'cook';
+        case Role.Consumer: return 'consumer';
+        default: return String(role || '').toLowerCase() || 'manager';
+      }
+    })();
     const payload: any = {
       id,
       name,
@@ -645,10 +674,10 @@ export class ManagersListComponent implements OnInit {
   }
 
   onDelete(m: ManagerItem): void {
-    if (!m?.id) {
-      this.toast.error('Invalid manager id');
-      return;
-    }
+    // if (!m?.id) {
+    //   this.toast.error('Invalid manager id');
+    //   return;
+    // }
     Swal.fire({
       title: 'Delete manager?',
       text: `Are you sure you want to delete ${m.name || 'this manager'}? This action cannot be undone.`,

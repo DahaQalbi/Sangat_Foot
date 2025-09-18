@@ -13,12 +13,18 @@
       <table class="min-w-full table-auto border-separate border-spacing-y-2">
         <thead>
           <tr class="text-left">
+            <th class="px-2 py-2 w-8"></th>
             <th class="px-4 py-2">Category</th>
             <th class="px-4 py-2 w-24">Action</th>
           </tr>
         </thead>
         <tbody cdkDropList (cdkDropListDropped)="drop($event)">
           <tr *ngFor="let c of categories; let i = index" cdkDrag class="bg-white dark:bg-[#0e1726]">
+            <td class="px-2 py-2 align-middle select-none">
+              <span cdkDragHandle class="inline-flex h-6 w-6 cursor-grab items-center justify-center text-gray-400 hover:text-gray-600 active:cursor-grabbing">
+                <icon-menu-drag-and-drop class="h-4 w-4"></icon-menu-drag-and-drop>
+              </span>
+            </td>
             <td class="px-4 py-2">{{ c.category || c.name || c.title }}</td>
             <td class="px-4 py-2">
               <button class="btn btn-outline-danger !p-2" (click)="delete(c)" [disabled]="deletingId === (c.id || c._id || c.categoryId || c.name || c.category)">

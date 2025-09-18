@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnChanges, Input, ViewChild, ElementRef, SimpleChanges } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { OrderService } from 'src/app/services/order.service';
@@ -14,7 +14,7 @@ import { Role } from 'src/app/enums/role.enum';
   selector: 'app-table-info',
   templateUrl: './table-info.component.html',
 })
-export class TableInfoComponent implements OnInit {
+export class TableInfoComponent implements OnInit, OnChanges {
   @Input() orderIdOverride: number | null = null;
   @Input() summaryOverride: { items: any[]; totalsale: number; totalcost: number } | null = null;
   @Input() dealIdOverride: number | null = null;
@@ -26,6 +26,8 @@ export class TableInfoComponent implements OnInit {
   summary: { items: any[]; totalsale: number; totalcost: number } | null = null;
   dealId: number | null = null;
   showDiscount = false;
+  // Toggle to show/hide taxes and include/exclude them from totals
+  showTaxes = false;
 
   // computed
   sale = 0;
@@ -219,6 +221,19 @@ public ordertkrid:any;
 
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!changes || !this.form) return;
+    if (changes['summaryOverride'] && this.summaryOverride) {
+      this.summary = this.summaryOverride;
+      if (this.orderIdOverride != null) this.orderId = Number(this.orderIdOverride);
+      if (this.dealIdOverride != null) this.dealId = Number(this.dealIdOverride);
+      this.form.patchValue({ id: this.orderId, deal_id: this.dealId ?? null }, { emitEvent: false });
+      this.hydrateDetailsFromSummary();
+      this.onRecalc();
+      this.loading = false;
+    }
+  }
+
   get orderDetails() {
     return this.form.get('orderDetails') as any;
   }
@@ -291,8 +306,8 @@ public ordertkrid:any;
     this.cost = details.reduce((a: number, r: any) => a + (Number(r.cost) || 0) * (Number(r.qty) || 0), 0);
     const discount = Number(this.form.value.discount || 0);
     const delivery = Number(this.form.value.delivery_fee || 0);
-    const sgstPct = Number(this.form.value.sgst || 0);
-    const cgstPct = Number(this.form.value.cgst || 0);
+    const sgstPct = this.showTaxes ? Number(this.form.value.sgst || 0) : 0;
+    const cgstPct = this.showTaxes ? Number(this.form.value.cgst || 0) : 0;
     this.sgstAmount = +(this.sale * sgstPct / 100).toFixed(2);
     this.cgstAmount = +(this.sale * cgstPct / 100).toFixed(2);
     this.net = +(this.sale - discount + delivery + this.sgstAmount + this.cgstAmount).toFixed(2);
@@ -411,24 +426,46 @@ public ordertkrid:any;
   confirmAddProducts(): void {
     if (!this.picked.size) { this.toast.error('Please select at least one product'); return; }
     for (const { product, qty } of Array.from(this.picked.values())) {
-      this.orderDetails.push(this.fb.group({
-        id: [Date.now()],
-        product_id: [product?.productId ?? product?.id],
-        name: [product?.name || ''],
-        size: [''],
-        qty: [qty],
-        cost: [0],
-        sale: [this.priceOfProduct(product)],
-        // carry product preparation time if provided
-        preparation_time: [Number((product?.preparation_time ?? product?.preparationTime ?? product?.prep_time) || 0)],
-        note: [''],
-      }));
+      this.addProductFromPicker(product, qty);
     }
     this.picked.clear();
     this.onRecalc();
     this.closeAddProducts();
   }
 
+  // Add directly from picker (+ icon or confirm). If exists with same product_id and size, increment qty
+  addProductFromPicker(product: any, qty: number = 1): void {
+    try {
+      const pid = product?.productId ?? product?.id;
+      const name = product?.name || '';
+      const sizes = Array.isArray(product?.sizeType) ? product.sizeType : [];
+      const first = sizes[0] || {};
+      const sizeType = String(first?.type || 'Default');
+      const sale = Number(first?.sale ?? first?.price ?? product?.price ?? 0) || 0;
+      const cost = Number(first?.cost ?? 0) || 0;
+      // find existing row
+      const idx = this.orderDetails.controls.findIndex((g: any) => String(g.value.product_id) === String(pid) && String(g.value.size || 'Default') === sizeType);
+      if (idx >= 0) {
+        const g = this.orderDetails.at(idx);
+        const cur = Number(g.value.qty) || 0;
+        g.patchValue({ qty: cur + Number(qty || 1) });
+      } else {
+        this.orderDetails.push(this.fb.group({
+          id: [Date.now()],
+          product_id: [pid],
+          name: [name],
+          size: [sizeType],
+          qty: [Number(qty || 1)],
+          cost: [cost],
+          sale: [sale],
+          preparation_time: [Number((product?.preparation_time ?? product?.preparationTime ?? product?.prep_time) || 0)],
+          note: [''],
+        }));
+      }
+      this.onRecalc();
+      this.toast.success('Item added');
+    } catch {}
+  }
 
   private buildSummary(order: any): { items: any[]; totalsale: number; totalcost: number } {
     const items = (order?.items || []).map((it: any) => {

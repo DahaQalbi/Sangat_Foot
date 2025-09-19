@@ -111,6 +111,17 @@ export class PaidOrdersComponent implements OnInit {
       customer: o?.customerName || o?.customer || 'Guest',
       waiter: o?.waiterName || o?.waiter || '',
       orderType,
+      // include raw fields needed for printing
+      orderItems: o?.orderItems || o?.items || [],
+      sale: o?.sale,
+      discount: o?.discount,
+      delivery_fee: o?.delivery_fee,
+      sgst: o?.sgst,
+      cgst: o?.cgst,
+      net: o?.net,
+      note: o?.note,
+      delivery_type: o?.delivery_type || rawType,
+      address: o?.address,
     };
   }
 
@@ -123,147 +134,149 @@ export class PaidOrdersComponent implements OnInit {
     return OrderStatus.Pending;
   }
 
-  // Print a full invoice styled similar to the provided reference
+  // Compact receipt-style print consistent with Add/Completed
   printInvoice(o: any) {
-    const win = window.open('', '_blank');
-    if (!win) return;
-    const created = new Date(o?.created || Date.now());
-    const currency = 'Rs ';
-    const toMoney = (n: any) => currency + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const logoUrl = this.logoSrc.startsWith('http') ? this.logoSrc : (window.location.origin + this.logoSrc);
-
-    // Try to derive items if present on the order object
-    const rawItems: any[] = Array.isArray(o?.items)
-      ? o.items
-      : Array.isArray(o?.orderItems)
-      ? o.orderItems
-      : [];
-    const items = rawItems.map((it: any, idx: number) => {
-      const name = it?.name || it?.product?.name || `Item ${idx + 1}`;
-      const unit = it?.price ?? it?.selectedSize?.sale ?? it?.amount ?? it?.unitPrice ?? 0;
+    const createdStr = o?.create_at || o?.created_at || o?.createdAt || new Date().toISOString();
+    const createdAt = new Date(createdStr).toLocaleString();
+    const rows: any[] = (Array.isArray(o?.orderItems) ? o.orderItems : (Array.isArray(o?.items) ? o.items : [])).map((it: any) => {
       const qty = Number(it?.qty ?? it?.quantity ?? 1) || 1;
-      const total = Number(unit) * qty;
-      return { name, unit, qty, total };
+      const unit = Number(it?.sale ?? it?.price ?? it?.amount ?? 0) || 0;
+      const baseName = it?.name || it?.product?.name || 'Item';
+      const sizeTxt = (it?.size || it?.selectedSize?.type) ? ` (${it?.size || it?.selectedSize?.type})` : '';
+      return { qty, name: `${baseName}${sizeTxt}`, sale: unit, line: qty * unit };
     });
-    if (!items.length) {
-      // Fallback: single line item representing the bill
-      items.push({ name: 'Order Total', unit: Number(o?.total) || 0, qty: 1, total: Number(o?.total) || 0 });
-    }
+    const sale = rows.reduce((a, r) => a + r.line, 0);
+    const discount = Number(o?.discount || 0);
+    const delivery = Number(o?.delivery_fee || 0);
+    const sgstPct = Number(o?.sgst || 0);
+    const cgstPct = Number(o?.cgst || 0);
+    const sgstAmount = +(sale * sgstPct / 100).toFixed(2);
+    const cgstAmount = +(sale * cgstPct / 100).toFixed(2);
+    const localNet = +((sale - discount + delivery + sgstAmount + cgstAmount)).toFixed(2);
+    const company = (localStorage.getItem('companyName') || 'Sangat Fast Food');
+    const addressL1 = localStorage.getItem('companyAddressL1') || 'Tando adam Chowk Shahdadpur';
+    const addressL2 = localStorage.getItem('companyAddressL2') || 'Dist:Sanghar Sindh';
+    const phone = localStorage.getItem('companyPhone') || 'Phone:03353878664';
+    const currency = localStorage.getItem('currencySymbol') || '$';
+    const fmt = (n: number) => `${currency}${(Number(n)||0).toFixed(2)}`;
+    const status = (o?.status || 'PAID').toString().trim().toUpperCase();
 
-    const subtotal = items.reduce((a, r) => a + r.total, 0);
-    const taxRate = 0.1; // 10%
-    const tax = subtotal * taxRate;
-    const grand = subtotal + tax;
+    const styles = `
+      <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #111; }
+        .receipt { width: 300px; max-width: 90vw; margin: 0 auto; padding: 12px; }
+        .center { text-align: center; }
+        .title { font-weight: 800; font-size: 16px; margin: 0; }
+        .sub { font-size: 11px; line-height: 1.3; margin: 2px 0; color: #111; }
+        .dots { border-top: 2px dotted #000; margin: 8px 0; height: 0; }
+        .meta-row { display: flex; justify-content: space-between; font-size: 12px; margin: 6px 0; }
+        .status { text-align: center; font-weight: 700; font-size: 12px; margin: 4px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { font-size: 12px; padding: 4px 0; }
+        th.qty, td.qty { padding-right: 8px; }
+        th.name, td.name { padding-left: 6px; }
+        th.name { white-space: nowrap; word-break: keep-all; }
+        thead th { border-bottom: 2px solid #000; }
+        tbody td { border-bottom: 1px dotted #999; }
+        .num { text-align: right; }
+        .totals td { padding: 3px 0; border: 0; }
+        .totals .label { text-align: left; }
+        .totals .val { text-align: right; }
+        .grand { font-weight: 800; font-size: 14px; }
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .receipt { width: 58mm; padding: 6px; } }
+      </style>
+    `;
+
+    const itemsHtml = rows.map((r) => `
+      <tr>
+        <td class="num qty">${r.qty}</td>
+        <td class="name">${(r.name || '').toString().replace(/[&<>"']/g, (c: string) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'} as Record<string,string>)[c])}</td>
+        <td class="num">${fmt(r.sale)}</td>
+        <td class="num">${fmt(r.line)}</td>
+      </tr>
+    `).join('');
+
+    const taxesHtml = (sgstPct || cgstPct) ? `
+      <tr><td class="label">SGST (${sgstPct}%)</td><td class="val">${fmt(sgstAmount)}</td></tr>
+      <tr><td class="label">CGST (${cgstPct}%)</td><td class="val">${fmt(cgstAmount)}</td></tr>
+    ` : '';
 
     const html = `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Invoice #${o?.id}</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color: #111827; margin: 0; }
-    .container { max-width: 720px; margin: 40px auto; padding: 0 24px; }
-    .header { display: flex; align-items: center; justify-content: space-between; }
-    .brand { text-align: center; margin: 16px auto; }
-    .brand img { width: 150px; height: auto; object-fit: contain; }
-    .muted { color: #6b7280; font-size: 12px; }
-    h1 { font-size: 20px; margin: 8px 0; letter-spacing: 2px; }
-    h2 { font-size: 12px; font-weight: 800; letter-spacing: 1px; color: #6b7280; margin: 24px 0 6px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .hr { border: 0; border-top: 1px solid #e5e7eb; margin: 16px 0; }
-    table { width: 100%; border-collapse: collapse; }
-    th { text-align: left; font-size: 11px; letter-spacing: 1px; color: #6b7280; padding: 10px 8px; border-bottom: 2px solid #e5e7eb; }
-    td { font-size: 13px; color: #111827; padding: 10px 8px; border-bottom: 1px solid #f3f4f6; }
-    tfoot td { border-bottom: none; font-weight: 700; }
-    .right { text-align: right; }
-    .totals { width: 240px; margin-left: auto; }
-    .bank { margin-top: 28px; }
-    .thankyou { margin-top: 40px; text-align: right; font-style: italic; font-size: 24px; color: #6b7280; }
-    @media print { .container { margin: 0 auto; } }
-  </style>
-  <script>
-    function onLoaded(){ setTimeout(()=>{ window.print(); }, 100); }
-  </script>
-  </head>
-  <body onload="onLoaded()">
-    <div class="container">
-      <div class="brand">
-        <img src="${logoUrl}" alt="Logo" />
-        ${this.companyName ? `<div class="muted">${this.companyName}</div>` : ''}
-      </div>
-
-      <div class="grid">
-        <div>
-          <h2>ISSUED TO:</h2>
-          <div>${o?.customer || 'Guest'}</div>
-          ${o?.company ? `<div class="muted">${o.company}</div>` : ''}
-          ${o?.phone ? `<div class="muted">${o.phone}</div>` : ''}
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Order ${o?.id} - Receipt</title>
+        ${styles}
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="center">
+            <h2 class="title">${company}</h2>
+            <div class="sub">${addressL1}</div>
+            <div class="sub">${addressL2}</div>
+            <div class="sub">${phone}</div>
+          </div>
+          <div class="dots"></div>
+          <div class="status">${status}</div>
+          <div class="meta-row">
+            <div>Order #${o?.id ?? ''}</div>
+            <div>${createdAt}</div>
+          </div>
+          <div class="dots"></div>
+          <table>
+            <thead>
+              <tr>
+                <th class="num qty" style="width:36px;">Qty</th>
+                <th class="name">Item&nbsp;Name</th>
+                <th class="num" style="width:62px;">Price</th>
+                <th class="num" style="width:68px;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+          <div class="dots"></div>
+          <table class="totals">
+            <tr><td class="label">Sub Total:</td><td class="val">${fmt(sale)}</td></tr>
+            <tr><td class="label">Discount:</td><td class="val">${fmt(discount)}</td></tr>
+            <tr><td class="label">Delivery Fee:</td><td class="val">${fmt(delivery)}</td></tr>
+            ${taxesHtml}
+            <tr><td class="label grand">Total:</td><td class="val grand">${fmt(localNet)}</td></tr>
+          </table>
+          <div class="dots"></div>
         </div>
-        <div class="right">
-          <h2>INVOICE NO:</h2>
-          <div><strong>#${o?.id ?? ''}</strong></div>
-          <div class="muted">${created.toLocaleDateString()}</div>
-        </div>
-      </div>
+      </body>
+    </html>`;
 
-      <hr class="hr"/>
+    this.printHtmlViaIframe(html);
+  }
 
-      <table>
-        <thead>
-          <tr>
-            <th>DESCRIPTION</th>
-            <th class="right">UNIT PRICE</th>
-            <th class="right">QTY</th>
-            <th class="right">TOTAL</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items
-            .map(
-              (it) => `
-            <tr>
-              <td>${it.name}</td>
-              <td class="right">${toMoney(it.unit)}</td>
-              <td class="right">${it.qty}</td>
-              <td class="right">${toMoney(it.total)}</td>
-            </tr>`
-            )
-            .join('')}
-        </tbody>
-      </table>
-
-      <hr class="hr"/>
-
-      <table class="totals">
-        <tbody>
-          <tr>
-            <td>Subtotal</td>
-            <td class="right">${toMoney(subtotal)}</td>
-          </tr>
-          <tr>
-            <td style="font-weight:800">Amount due</td>
-            <td class="right" style="font-weight:800">${toMoney(grand)}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="bank">
-        <h2>BANK DETAILS</h2>
-        <div>Borcelo Bank</div>
-        <div class="muted">Account Name: Cashier</div>
-        <div class="muted">Account No.: 0000-0000</div>
-        <div class="muted">Pay by: ${new Date(Date.now() + 7*24*60*60*1000).toLocaleDateString()}</div>
-      </div>
-
-      <div class="thankyou">thank you</div>
-    </div>
-  </body>
-</html>`;
-
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
+  private printHtmlViaIframe(html: string): void {
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) { document.body.removeChild(iframe); return; }
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {}
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 800);
+      }, 200);
+    } catch {}
   }
 }

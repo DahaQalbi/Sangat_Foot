@@ -141,10 +141,17 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-2">
-      <button type="submit" class="btn btn-primary" [disabled]="submitting || form.invalid">{{ isUpdateMode ? 'Update Order' : 'Add Order' }}</button>
-      <button type="button" class="btn btn-outline-primary" (click)="printPdf()">Print PDF</button>
-      <a routerLink="/orders/add" class="btn btn-outline-primary">Back</a>
+    <div class="flex flex-col items-end gap-2">
+      <div class="flex items-center gap-2 flex-nowrap overflow-x-auto whitespace-nowrap w-full">
+        <ng-container *ngIf="!isUpdateMode">
+          <button type="button" class="btn !bg-red-600 hover:!bg-red-700 text-white flex-1 basis-1/2" (click)="setStatusAndPrint('paid')" [disabled]="submitting || totalQty === 0">Paid &amp; Print</button>
+          <button type="button" class="btn !bg-red-600 hover:!bg-red-700 text-white flex-1 basis-1/2" (click)="setStatusAndPrint('pending')" [disabled]="submitting || totalQty === 0">Pending &amp; Print</button>
+        </ng-container>
+        <a *ngIf="isUpdateMode" routerLink="/orders/add" class="btn btn-outline-primary">Back</a>
+      </div>
+      <div class="w-full">
+        <button type="submit" class="btn btn-primary" [class.w-full]="!isUpdateMode" [disabled]="submitting || form.invalid">{{ isUpdateMode ? 'Update Order' : 'Add Order' }}</button>
+      </div>
     </div>
   </form>
 

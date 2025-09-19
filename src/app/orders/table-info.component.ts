@@ -378,6 +378,15 @@ public ordertkrid:any;
     } catch {}
   }
 
+  // Helper: set status then print
+  setStatusAndPrint(status: 'paid' | 'pending'): void {
+    try {
+      const st = (status || 'pending').toLowerCase();
+      this.form.patchValue({ status: st });
+    } catch {}
+    this.printPdf();
+  }
+
   private buildReceiptHtml(): string {
     const v = this.form?.value || {};
     const rows: any[] = (this.orderDetails?.value || []).map((r: any) => ({
@@ -403,6 +412,10 @@ public ordertkrid:any;
     const sgstAmount = this.sgstAmount;
     const cgstAmount = this.cgstAmount;
     const note = (v.note || '').toString();
+    const status = (v.status || 'pending').toString().trim().toUpperCase();
+    // Compute subtotal from rows and recompute net locally to ensure accuracy on print
+    const saleSum = rows.reduce((a: number, r: any) => a + r.line, 0);
+    const localNet = +((saleSum - discount + delivery + (showTaxes ? (sgstAmount + cgstAmount) : 0))).toFixed(2);
 
     const styles = `
       <style>
@@ -416,6 +429,7 @@ public ordertkrid:any;
         .sub { font-size: 11px; line-height: 1.3; margin: 2px 0; color: #111; }
         .dots { border-top: 2px dotted #000; margin: 8px 0; height: 0; }
         .meta-row { display: flex; justify-content: space-between; font-size: 12px; margin: 6px 0; }
+        .status { text-align: center; font-weight: 700; font-size: 12px; margin: 4px 0; }
         table { width: 100%; border-collapse: collapse; }
         th, td { font-size: 12px; padding: 4px 0; }
         /* Add spacing between Qty and Item Name */
@@ -471,6 +485,7 @@ public ordertkrid:any;
             <div class="sub">${this.escapeHtml(phone)}</div>
           </div>
           <div class="dots"></div>
+          <div class="status">${this.escapeHtml(status)}</div>
           <div class="meta-row">
             <div>Order #${orderNo}</div>
             <div>${createdAt}</div>
@@ -491,12 +506,11 @@ public ordertkrid:any;
           </table>
           <div class="dots"></div>
           <table class="totals">
-            <tr><td class="label">Sub Total:</td><td class="val">${fmt(this.sale)}</td></tr>
-            ${showTaxes ? '' : ''}
-            ${taxesHtml}
+            <tr><td class="label">Sub Total:</td><td class="val">${fmt(saleSum)}</td></tr>
             <tr><td class="label">Discount:</td><td class="val">${fmt(discount)}</td></tr>
-            ${delivery ? `<tr><td class=\"label\">Delivery Fee:</td><td class=\"val\">${fmt(delivery)}</td></tr>` : ''}
-            <tr><td class="label grand">Total:</td><td class="val grand">${fmt(this.net)}</td></tr>
+            <tr><td class="label">Delivery Fee:</td><td class="val">${fmt(delivery)}</td></tr>
+            ${taxesHtml}
+            <tr><td class="label grand">Total:</td><td class="val grand">${fmt(localNet)}</td></tr>
           </table>
           <div class="dots"></div>
           ${noteHtml}

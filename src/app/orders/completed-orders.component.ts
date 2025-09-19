@@ -147,108 +147,155 @@ export class CompletedOrdersComponent implements OnInit {
   }
 
   printInvoice(o: any) {
-    const win = window.open('', '_blank');
-    if (!win) return;
-    // Normalize fields from backend payload
+    // Normalize fields
     const createdStr = o?.create_at || o?.created_at || o?.createdAt || new Date().toISOString();
-    const created = new Date(createdStr);
-    const items: any[] = Array.isArray(o?.orderItems) ? o.orderItems : (Array.isArray(o?.items) ? o.items : []);
-    const currency = 'Rs ';
-    const toMoney = (n: any) => currency + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-    // Build item rows: assume qty=1 if not provided; use sale as unit price if present
-    const normalized = items.map((it: any) => {
-      const qty = Number(it?.qty ?? 1) || 1;
-      const name = it?.name || it?.product?.name || 'Item';
-      const unit = Number(it?.sale ?? it?.price ?? it?.amount ?? 0) || 0;
-      const total = unit * qty;
-      return { qty, name, unit, total };
+    const createdAt = new Date(createdStr).toLocaleString();
+    const rawList: any[] = Array.isArray(o?.orderItems)
+      ? o.orderItems
+      : (Array.isArray(o?.items)
+        ? o.items
+        : (Array.isArray(o?.orderDetails)
+          ? o.orderDetails
+          : []));
+    const rows: any[] = rawList.map((it: any) => {
+      const qty = Number(it?.qty ?? it?.quantity ?? it?.Quantity ?? 1) || 1;
+      const unit = Number(it?.sale ?? it?.price ?? it?.amount ?? it?.unitPrice ?? 0) || 0;
+      const baseName = it?.name || it?.product?.name || 'Item';
+      const sizeTxt = (it?.size || it?.selectedSize?.type) ? ` (${it?.size || it?.selectedSize?.type})` : '';
+      return { qty, name: `${baseName}${sizeTxt}`, sale: unit, line: qty * unit };
     });
-    const itemsTotal = normalized.reduce((a, r) => a + r.total, 0);
-    const subtotal = Number(o?.sale) ? Number(o.sale) : itemsTotal;
-    const discountVal = Number(o?.discount) || 0;
-    const delFee = Number(o?.delivery_fee) || 0;
-    // Treat sgst/cgst as PERCENTAGES (e.g., 10 => 10%) as requested
-    const sgstPct = Number(o?.sgst) || 0;
-    const cgstPct = Number(o?.cgst) || 0;
-    const sgstVal = +(subtotal * (sgstPct / 100));
-    const cgstVal = +(subtotal * (cgstPct / 100));
-    const computedGrand = subtotal - discountVal + delFee + sgstVal + cgstVal;
-    const grand = Number(o?.net) ? Number(o.net) : computedGrand;
+    const sale = rows.reduce((a, r) => a + r.line, 0);
+    const discount = Number(o?.discount || 0);
+    const delivery = Number(o?.delivery_fee || 0);
+    const sgstPct = Number(o?.sgst || 0);
+    const cgstPct = Number(o?.cgst || 0);
+    const sgstAmount = +(sale * sgstPct / 100).toFixed(2);
+    const cgstAmount = +(sale * cgstPct / 100).toFixed(2);
+    const localNet = +((sale - discount + delivery + sgstAmount + cgstAmount)).toFixed(2);
+    const company = (localStorage.getItem('companyName') || 'Sangat Fast Food');
+    const addressL1 = localStorage.getItem('companyAddressL1') || 'Tando adam Chowk Shahdadpur';
+    const addressL2 = localStorage.getItem('companyAddressL2') || 'Dist:Sanghar Sindh';
+    const phone = localStorage.getItem('companyPhone') || 'Phone:03353878664';
+    const currency = localStorage.getItem('currencySymbol') || '$';
+    const fmt = (n: number) => `${currency}${(Number(n)||0).toFixed(2)}`;
+    const status = (o?.status || 'completed').toString().trim().toUpperCase();
 
-    const companyName = 'Sangat Fast Food';
-    const address1 = (window as any)?.envAddress1 || 'Tando adam Chowk Shahdadpur';
-    const address2 = (window as any)?.envAddress2 || 'Dist:Sanghar Sindh';
-    const phone = (window as any)?.envPhone || 'Phone:03353878664';
+    const styles = `
+      <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #111; }
+        .receipt { width: 300px; max-width: 90vw; margin: 0 auto; padding: 12px; }
+        .center { text-align: center; }
+        .title { font-weight: 800; font-size: 16px; margin: 0; }
+        .sub { font-size: 11px; line-height: 1.3; margin: 2px 0; color: #111; }
+        .dots { border-top: 2px dotted #000; margin: 8px 0; height: 0; }
+        .meta-row { display: flex; justify-content: space-between; font-size: 12px; margin: 6px 0; }
+        .status { text-align: center; font-weight: 700; font-size: 12px; margin: 4px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { font-size: 12px; padding: 4px 0; }
+        th.qty, td.qty { padding-right: 8px; }
+        th.name, td.name { padding-left: 6px; }
+        th.name { white-space: nowrap; word-break: keep-all; }
+        thead th { border-bottom: 2px solid #000; }
+        tbody td { border-bottom: 1px dotted #999; }
+        .num { text-align: right; }
+        .totals td { padding: 3px 0; border: 0; }
+        .totals .label { text-align: left; }
+        .totals .val { text-align: right; }
+        .grand { font-weight: 800; font-size: 14px; }
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .receipt { width: 58mm; padding: 6px; } }
+      </style>
+    `;
+
+    const itemsHtml = rows.map((r) => `
+      <tr>
+        <td class="num qty">${r.qty}</td>
+        <td class="name">${(r.name || '').toString().replace(/[&<>"']/g, (c: string) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'} as Record<string,string>)[c])}</td>
+        <td class="num">${fmt(r.sale)}</td>
+        <td class="num">${fmt(r.line)}</td>
+      </tr>
+    `).join('');
+
+    const taxesHtml = (sgstPct || cgstPct) ? `
+      <tr><td class="label">SGST (${sgstPct}%)</td><td class="val">${fmt(sgstAmount)}</td></tr>
+      <tr><td class="label">CGST (${cgstPct}%)</td><td class="val">${fmt(cgstAmount)}</td></tr>
+    ` : '';
 
     const html = `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Order #${o?.id}</title>
-  <style>
-    @page { size: 80mm auto; margin: 8mm 6mm; }
-    body { font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:#111827; }
-    .header { text-align:center; }
-    .title { font-weight: 800; font-size: 18px; }
-    .muted { color:#6b7280; font-size: 12px; line-height: 1.15; }
-    .row { display:flex; justify-content: space-between; align-items:center; font-size: 12px; margin: 10px 0; }
-    .hr { border:0; border-top:1px dashed #9ca3af; margin: 10px 0; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { padding: 6px 4px; }
-    th { text-align:left; border-bottom:1px solid #111827; font-weight:700; }
-    td { border-bottom:1px dashed #e5e7eb; }
-    .right { text-align:right; }
-    .totals { width: 100%; margin-top: 6px; font-size: 12px; }
-    .totals .row { margin: 4px 0; }
-    .grand { font-weight: 800; font-size: 14px; }
-  </style>
-  <script>function onLoaded(){ setTimeout(()=>{ window.print(); }, 100); }</script>
-  </head>
-  <body onload="onLoaded()">
-    <div class="header">
-      <div class="title">${companyName}</div>
-      <div class="muted">${address1}</div>
-      <div class="muted">${address2}</div>
-      <div class="muted">${phone}</div>
-    </div>
-    <div class="row">
-      <div>Order #${o?.id ?? ''}</div>
-      <div>${created.toLocaleString()}</div>
-    </div>
-    <hr class="hr"/>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:40px">Qty</th>
-          <th>Item Name</th>
-          <th class="right" style="width:80px">Price</th>
-          <th class="right" style="width:90px">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${normalized.map(r => `
-          <tr>
-            <td>${r.qty}</td>
-            <td>${r.name}</td>
-            <td class="right">${toMoney(r.unit)}</td>
-            <td class="right">${toMoney(r.total)}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>
-    <div class="totals">
-      <div class="row"><div>Sub Total:</div><div class="right">${toMoney(subtotal)}</div></div>
-      <div class="row"><div>Discount:</div><div class="right">-${toMoney(discountVal)}</div></div>
-      <div class="row"><div>Delivery Fee:</div><div class="right">${toMoney(delFee)}</div></div>
-      <div class="row"><div>SGST (${sgstPct ? sgstPct.toFixed(2) + '%' : '0%'}):</div><div class="right">${toMoney(sgstVal)}</div></div>
-      <div class="row"><div>CGST (${cgstPct ? cgstPct.toFixed(2) + '%' : '0%'}):</div><div class="right">${toMoney(cgstVal)}</div></div>
-      <div class="row grand"><div>Total:</div><div class="right">${toMoney(grand)}</div></div>
-    </div>
-  </body>
-</html>`;
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Order ${o?.id} - Receipt</title>
+        ${styles}
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="center">
+            <h2 class="title">${company}</h2>
+            <div class="sub">${addressL1}</div>
+            <div class="sub">${addressL2}</div>
+            <div class="sub">${phone}</div>
+          </div>
+          <div class="dots"></div>
+          <div class="status">${status}</div>
+          <div class="meta-row">
+            <div>Order #${o?.id ?? ''}</div>
+            <div>${createdAt}</div>
+          </div>
+          <div class="dots"></div>
+          <table>
+            <thead>
+              <tr>
+                <th class="num qty" style="width:36px;">Qty</th>
+                <th class="name">Item&nbsp;Name</th>
+                <th class="num" style="width:62px;">Price</th>
+                <th class="num" style="width:68px;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+          <div class="dots"></div>
+          <table class="totals">
+            <tr><td class="label">Sub Total:</td><td class="val">${fmt(sale)}</td></tr>
+            <tr><td class="label">Discount:</td><td class="val">${fmt(discount)}</td></tr>
+            <tr><td class="label">Delivery Fee:</td><td class="val">${fmt(delivery)}</td></tr>
+            ${taxesHtml}
+            <tr><td class="label grand">Total:</td><td class="val grand">${fmt(localNet)}</td></tr>
+          </table>
+          <div class="dots"></div>
+        </div>
+      </body>
+    </html>`;
+
+    this.printHtmlViaIframe(html);
+  }
+
+  private printHtmlViaIframe(html: string): void {
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) { document.body.removeChild(iframe); return; }
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {}
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 800);
+      }, 200);
+    } catch {}
   }
 }

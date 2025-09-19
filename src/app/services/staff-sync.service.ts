@@ -49,7 +49,7 @@ export class StaffSyncService {
           const role: string = String(rec.payload?.role || '').toLowerCase();
           if (rec.action === 'update') {
             if (role === 'waiter') {
-              await firstValueFrom(this.staffApi.updateWaiter(rec.payload));
+              await firstValueFrom(this.staffApi.updateManager(rec.payload));
             } else {
               await firstValueFrom(this.staffApi.updateManager(rec.payload));
             }

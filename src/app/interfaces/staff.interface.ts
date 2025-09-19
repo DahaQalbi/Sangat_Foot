@@ -34,3 +34,9 @@ export interface UpdateManagerPayload {
   phone: string;
   name: string;
 }
+
+export interface DeleteRecordPayload {
+  id: string | number;
+  key: string;
+  table: string;
+}

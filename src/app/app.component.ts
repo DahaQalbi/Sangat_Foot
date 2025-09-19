@@ -7,8 +7,7 @@ import { StaffService } from './services/staff.service';
 import { ToastService } from './services/toast.service';
 import { ProductService } from './services/product.service';
 import { OrderService } from './services/order.service';
-import { Base64ConvertionService } from './services/base64-convertion.service';
-import { environment } from 'src/environments/environment';
+
 
 
 @Component({
@@ -18,7 +17,6 @@ import { environment } from 'src/environments/environment';
 export class AppComponent  {
    private idb:IdbService = inject(IdbService);
    private interval:any;
-   private base64ConvertionService:Base64ConvertionService = inject(Base64ConvertionService);
    private userApiCall:StaffService = inject(StaffService);
    private apiProductCall:ProductService = inject(ProductService);
    private apiOrderCall:OrderService = inject(OrderService);
@@ -54,10 +52,16 @@ export class AppComponent  {
             )
             .subscribe();
            this.syncData()
+           this.syncDeleteData()
     }
     private async syncData():Promise<void>{
       this.interval = setInterval(() => {
         this.getAllDb()
+      }, 10000);
+    }
+    private async syncDeleteData():Promise<void>{
+      this.interval = setInterval(() => {
+        this.syncDeletedData()
       }, 10000);
     }
   private async getAllDb():Promise<void>{
@@ -374,6 +378,22 @@ export class AppComponent  {
            }
       }
     }
+  }
+  private async syncDeletedData():Promise<void>{
+    console.log("syncDeletedData...")
+    const deletedDb = await this.idb.getAll("deletedData")
+    if(deletedDb.length !== 0){
+      deletedDb.forEach((item:any) => {
+        this.userApiCall.deleteRecord(item).subscribe({
+          next: (list) => {
+            this.idb.deleteByKey("deletedData", item.id)
+          },
+          error: (err) => {
+        this.toast.error(err?.error?.message || 'Failed to sync deleted Record')
+      }
+    })
+   })
+    } 
   }
 
 }

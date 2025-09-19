@@ -20,19 +20,22 @@ export class IdbService {
       req.onupgradeneeded = () => {
         const db = req.result;
         if (!db.objectStoreNames.contains('users')) {
-          db.createObjectStore('users', { keyPath: 'id', autoIncrement: true  });
+          db.createObjectStore('users', { keyPath: 'id',  });
         }
         if (!db.objectStoreNames.contains('products')) {
-          db.createObjectStore('products', { keyPath: 'id', autoIncrement: true  });
+          db.createObjectStore('products', { keyPath: 'id',  });
         }
         if (!db.objectStoreNames.contains('orders')) {
-          db.createObjectStore('orders', { keyPath: 'id', autoIncrement: true  });
+          db.createObjectStore('orders', { keyPath: 'id',  });
         }
         if (!db.objectStoreNames.contains('categories')) {
-          db.createObjectStore('categories', { keyPath: 'id', autoIncrement: true  });
+          db.createObjectStore('categories', { keyPath: 'id' });
         }
         if (!db.objectStoreNames.contains('deal')) {
-          db.createObjectStore('deal', { keyPath: 'id', autoIncrement: true  });
+          db.createObjectStore('deal', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('deletedData')) {
+          db.createObjectStore('deletedData', { keyPath: 'id' });
         }
       };
       req.onsuccess = () => resolve(req.result);

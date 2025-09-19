@@ -44,8 +44,9 @@ export class AllWaitersComponent implements OnInit {
     // Background refresh: do not block UI if cache has already loaded
     if (!this.waiters.length) this.loading = true;
     this.error = null;
-    this.staffService.getWaiters().subscribe({
+    this.staffService.getManagers().subscribe({
       next: async (list: ManagerItem[]) => {
+        list.filter((w: any) => w?.role === 'waiter');
         const normalized = (list || []).map((w: any, idx: number) => {
           const rawId = w?.id ?? w?._id ?? w?.uid;
           let id: any;

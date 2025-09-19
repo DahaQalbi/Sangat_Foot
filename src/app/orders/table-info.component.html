@@ -143,6 +143,7 @@
 
     <div class="flex items-center gap-2">
       <button type="submit" class="btn btn-primary" [disabled]="submitting || form.invalid">{{ isUpdateMode ? 'Update Order' : 'Add Order' }}</button>
+      <button type="button" class="btn btn-outline-primary" (click)="printPdf()">Print PDF</button>
       <a routerLink="/orders/add" class="btn btn-outline-primary">Back</a>
     </div>
   </form>

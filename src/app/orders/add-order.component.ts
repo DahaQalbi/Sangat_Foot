@@ -47,6 +47,11 @@ export class AddOrderComponent {
   customType = '';
   customCost: number | null = null;
   customSale: number | null = null;
+  // Guard to prevent accidental double-add from rapid click/bubble
+  private selectClickGuard = false;
+
+  // Memoized summary passed to child TableInfo to avoid rebinding every tick
+  selectedSummaryCache: { items: any[]; totalsale: number; totalcost: number } = { items: [], totalsale: 0, totalcost: 0 };
 
   // ----- Order Side Modal (Table Info) -----
   orderSidebarOpen = false;
@@ -147,6 +152,8 @@ export class AddOrderComponent {
           await this.idb.replaceAll('products', this.normalizedProductsForCache());
         } catch {}
         this.loading = false;
+        // Ensure summary is in sync on fresh load (in case something was preselected)
+        this.recomputeSelectedSummary();
       },
       error: async () => {
         // If API fails while online, fallback to cache
@@ -175,6 +182,7 @@ export class AddOrderComponent {
             }
           } catch {}
           this.onRecalc();
+          this.recomputeSelectedSummary();
         } catch {}
         this.loading = false;
         this.error = 'Failed to load products';
@@ -243,6 +251,7 @@ export class AddOrderComponent {
         this.selected.set(key, { product: entry, qty: Number(it.qty) || 1 });
       }
     }
+    this.recomputeSelectedSummary();
   }
 
   private normalizedProductsForCache(): any[] {
@@ -295,6 +304,10 @@ export class AddOrderComponent {
   }
 
   toggleSelect(p: any): void {
+    // Throttle to avoid duplicate adds from double events / rapid click
+    if (this.selectClickGuard) return;
+    this.selectClickGuard = true;
+    setTimeout(() => { this.selectClickGuard = false; }, 250);
     try {
       const sizes = Array.isArray(p?.sizeType) ? p.sizeType : [];
       // If multiple sizes, open chooser modal
@@ -321,7 +334,8 @@ export class AddOrderComponent {
     const base = p?.productId ?? p?.id;
     const key = p?.selectedSize ? `${base}_${p.selectedSize.type || 'Default'}` : String(base);
     const row = this.selected.get(key);
-    if (row) row.qty += 1;
+    if (row) { row.qty += 1; this.selected.set(key, row); }
+    this.recomputeSelectedSummary();
   }
 
   dec(p: any): void {
@@ -331,6 +345,26 @@ export class AddOrderComponent {
     if (!row) return;
     row.qty -= 1;
     if (row.qty <= 0) this.selected.delete(key);
+    else this.selected.set(key, row);
+    this.recomputeSelectedSummary();
+  }
+
+  // Receive qty updates from embedded TableInfo and sync to parent cart
+  onChildQtyChanged(evt: { productId: any; size: string; qty: number }): void {
+    try {
+      const base = evt?.productId;
+      const type = (evt?.size || 'Default').toString();
+      const key = `${base}_${type}`;
+      if (!this.selected.has(key)) return; // ignore unknown rows
+      if (evt.qty <= 0) {
+        this.selected.delete(key);
+      } else {
+        const row = this.selected.get(key)!;
+        row.qty = Number(evt.qty) || 1;
+        this.selected.set(key, row);
+      }
+      this.recomputeSelectedSummary();
+    } catch {}
   }
 
   private addOrIncSelection(product: any, selectedSize: { type: string; sale: number; cost?: number }, qty: number) {
@@ -345,6 +379,7 @@ export class AddOrderComponent {
     } else {
       this.selected.set(key, { product: entry, qty: Number(qty) || 1 });
     }
+    this.recomputeSelectedSummary();
   }
 
   get totalItems(): number {
@@ -372,7 +407,7 @@ export class AddOrderComponent {
   }
 
   // Build summary for embedded TableInfo component
-  get selectedSummary(): { items: any[]; totalsale: number; totalcost: number } {
+  private recomputeSelectedSummary(): void {
     const items = Array.from(this.selected.values()).map(({ product, qty }) => {
       const p = product || {};
       const sel = p.selectedSize || {};
@@ -393,7 +428,7 @@ export class AddOrderComponent {
     });
     const totalsale = items.reduce((a, r) => a + r.selectedSize.sale * r.qty, 0);
     const totalcost = items.reduce((a, r) => a + r.selectedSize.cost * r.qty, 0);
-    return { items, totalsale, totalcost };
+    this.selectedSummaryCache = { items, totalsale, totalcost };
   }
 
   async createOrder() {

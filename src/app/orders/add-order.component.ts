@@ -27,7 +27,6 @@ export class AddOrderComponent {
   categories: string[] = [];
   selectedCategory = 'All';
   categoryCounts: Record<string, number> = {};
-  imgUrl: string = environment.imgUrl;
   fallbackImg: string = '/assets/images/product-camera.jpg';
 
   // selected items: key by productId or id
@@ -90,7 +89,7 @@ export class AddOrderComponent {
     try {
       const obj: any = g as any;
       const path: string = (obj?.image ?? obj?.src ?? obj?.path ?? obj?.url ?? obj) as string;
-      return this.imgUrl + String(path || '');
+      return String(path || '');
     } catch {
       return this.fallbackImg;
     }
@@ -132,64 +131,22 @@ export class AddOrderComponent {
   }
 
   private fetchProducts() {
-    const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
-    if (!this.products.length) this.loading = true;
-    if (!online) {
-      // Offline: rely on cache from loadFromCache(); do not call API
-      this.loading = false;
-      if (!this.products.length) this.error = 'Offline: showing cached products';
-      return;
-    }
-    this.productService.getAllProducts().subscribe({
-      next: async (res) => {
-        const data = Array.isArray(res) ? res : (res?.data || res?.products || []);
-        this.products = data || [];
+    this.loading = true;
+    this.error = null;
+    this.idb
+      .getAll<any>('products')
+      .then((list) => {
+        this.products = Array.isArray(list) ? list : [];
         this.computeCategories();
-        // After products load, also fetch deals (needs products to compute sizes/prices)
-        this.fetchDeals();
-        try {
-          // Save fresh copy to IndexedDB for offline use
-          await this.idb.replaceAll('products', this.normalizedProductsForCache());
-        } catch {}
         this.loading = false;
         // Ensure summary is in sync on fresh load (in case something was preselected)
         this.recomputeSelectedSummary();
-      },
-      error: async () => {
-        // If API fails while online, fallback to cache
-        try {
-          const cached = await this.idb.getAll<any>('products');
-          this.products = cached || [];
-          this.computeCategories();
-          // Merge any prefillItems (e.g., from Add Product page) into left-side selection so Table Info reflects them
-          try {
-            const prefillItems = (history.state && (history.state as any).prefillItems) || null;
-            const items = Array.isArray(prefillItems) ? prefillItems : [];
-            for (const it of items) {
-              const p: any = {
-                id: it?.productId ?? it?.id,
-                productId: it?.productId ?? it?.id,
-                name: it?.name,
-                price: it?.selectedSize?.sale,
-                sizeType: [{ type: it?.selectedSize?.type, sale: it?.selectedSize?.sale, cost: it?.selectedSize?.cost }],
-              };
-              const sel = {
-                type: String(it?.selectedSize?.type || 'Default'),
-                sale: Number(it?.selectedSize?.sale || 0) || 0,
-                cost: Number(it?.selectedSize?.cost || 0) || 0,
-              };
-              this.addOrIncSelection(p, sel as any, Number(it?.qty || 1));
-            }
-          } catch {}
-          this.onRecalc();
-          this.recomputeSelectedSummary();
-        } catch {}
+      })
+      .catch(() => {
+        this.products = [];
         this.loading = false;
-        this.error = 'Failed to load products';
-        // Even if products API fails, attempt deals (may still work)
-        this.fetchDeals();
-      },
-    });
+        this.error = 'No local products found in IndexedDB';
+      });
   }
 
   private fetchDeals(): void {

@@ -45,7 +45,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <div *ngFor="let p of filteredProducts; trackBy: trackByProductId" class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-[#0e1726]">
         <div class="relative w-full overflow-hidden bg-gray-100 h-20 sm:h-24 lg:h-28" (click)="toggleSelect(p)">
-          <img [src]="imgUrl + p.image"
+          <img [src]="p.image"
                alt="{{p.name}}"
                class="h-full w-full object-cover"
                loading="lazy"
@@ -79,7 +79,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <div *ngFor="let d of deals" class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-[#0e1726]">
         <div class="relative w-full overflow-hidden bg-gray-100 h-28 sm:h-36 lg:h-44">
-          <img [src]="(d.items?.[0]?.image ? imgUrl + d.items[0].image : '/assets/images/placeholder.png')"
+          <img [src]="(d.items?.[0]?.image ? d.items[0].image : '/assets/images/placeholder.png')"
                alt="Deal"
                class="h-full w-full object-cover" />
         </div>

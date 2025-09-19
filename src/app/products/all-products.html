@@ -93,7 +93,7 @@
           <tr *ngFor="let p of filteredProducts" class="odd:bg-white even:bg-gray-50 dark:odd:bg-[#060b1b] dark:even:bg-[#0e1726]">
             <td class="px-4 py-3 text-sm">
               <div class="flex items-center gap-2">
-                <img [src]="imgUrl + p.image" alt="{{p.name}}" class="h-12 w-12 rounded object-cover" />
+                <img [src]="p.image" alt="{{p.name}}" class="h-12 w-12 rounded object-cover" />
                 <div class="flex items-center gap-1" *ngIf="p.gallery && p.gallery.length">
                   <img *ngFor="let g of p.gallery | slice:0:4" [src]="gallerySrc(g)" alt="thumb" class="h-8 w-8 rounded object-cover ring-1 ring-gray-200" />
                 </div>

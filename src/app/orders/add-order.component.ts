@@ -309,9 +309,22 @@ export class AddOrderComponent {
     this.selectClickGuard = true;
     setTimeout(() => { this.selectClickGuard = false; }, 250);
     try {
+      const base = p?.productId ?? p?.id;
       const sizes = Array.isArray(p?.sizeType) ? p.sizeType : [];
-      // If multiple sizes, open chooser modal
+      // If multiple sizes: toggle all sizes selection for this product
       if (sizes.length > 1) {
+        let removedAny = false;
+        for (const k of Array.from(this.selected.keys())) {
+          if (String(k).startsWith(String(base) + '_') || String(k) === String(base)) {
+            this.selected.delete(k);
+            removedAny = true;
+          }
+        }
+        if (removedAny) {
+          this.recomputeSelectedSummary();
+          return;
+        }
+        // Otherwise open the size chooser modal
         this.openSizeModal(p);
         return;
       }
@@ -322,6 +335,12 @@ export class AddOrderComponent {
         sel = { type: s.type || 'Default', sale: Number(s.sale ?? s.price ?? 0) || 0, cost: Number(s.cost ?? 0) };
       } else {
         sel = { type: 'Default', sale: Number(p?.price ?? 0) || 0, cost: 0 };
+      }
+      const key = `${base}_${sel.type || 'Default'}`;
+      if (this.selected.has(key)) {
+        this.selected.delete(key);
+        this.recomputeSelectedSummary();
+        return;
       }
       this.addOrIncSelection(p, sel, 1);
     } catch {

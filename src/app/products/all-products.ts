@@ -13,7 +13,6 @@ export class AllProductsComponent implements OnInit, AfterViewInit {
   loading = false;
   error: string | null = null;
   products: any[] = [];
-public imgUrl=environment.imgUrl;
   categories: string[] = [];
   selectedCategory: string = 'All';
   categoryCounts: Record<string, number> = {};
@@ -32,7 +31,7 @@ public imgUrl=environment.imgUrl;
     try {
       const obj: any = g as any;
       const path: string = (obj?.image ?? obj?.src ?? obj?.path ?? obj?.url ?? obj) as string;
-      return this.imgUrl + String(path || '');
+      return String(path || '');
     } catch {
       return '';
     }
@@ -81,34 +80,22 @@ public imgUrl=environment.imgUrl;
   fetch(): void {
     if (!this.products.length) this.loading = true;
     this.error = null;
-    this.productService.getAllProducts().subscribe({
-      next: (res: any) => {
-        const data = Array.isArray(res) ? res : (res?.data || res?.products || []);
-        this.products = data;
+    this.idb
+      .getAll<any>('products')
+      .then((list) => {
+        this.products = Array.isArray(list) ? list : [];
         this.computeCategories();
-        // Update cache in background
-        try {
-          this.idb.clearStore('products').then(() => {
-            this.idb.putAll('products', this.products as any[]).then(() => {
-              this.loading = false;
-            });
-          });
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn('Failed to update products cache', e);
-          this.loading = false;
-        }
+        this.loading = false;
         setTimeout(() => {
           this.resetChipScrollToStart();
           this.updateArrowVisibility();
         }, 0);
-      },
-      error: (err: any) => {
+      })
+      .catch(() => {
+        this.products = [];
         this.loading = false;
-        this.error = err?.error?.message || 'Failed to load products';
-        this.toast.error(this.error || 'Failed to load products');
-      },
-    });
+        this.error = 'No local products found in IndexedDB';
+      });
   }
 
   private normalizedProductsForCache(): any[] {

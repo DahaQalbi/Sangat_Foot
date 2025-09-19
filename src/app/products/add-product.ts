@@ -2,8 +2,10 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { environment } from 'src/environments/environment';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ProductService } from 'src/app/services/product.service';
+import { IdbService } from 'src/app/services/idb.service';
 import { ToastService } from 'src/app/services/toast.service';
 import { Router } from '@angular/router';
+import { v4 as uuidv4 } from 'uuid';
 
 @Component({
   templateUrl: './add-product.html',
@@ -33,6 +35,7 @@ export class AddProductComponent implements OnInit {
     private productService: ProductService,
     private toast: ToastService,
     private router: Router,
+    private idb: IdbService,
   ) {}
 
   ngOnInit(): void {
@@ -359,31 +362,62 @@ export class AddProductComponent implements OnInit {
     // include id for update
     if (this.isUpdateMode && this.editingId != null) {
       payload.id = this.editingId;
+    } else {
+      // generate a new id for create
+      payload.id = uuidv4();
     }
-    // Ensure image is pure base64 without header
-    payload.image = this.stripDataUrlHeader(payload.image);
-    // Normalize gallery to [{ image: '<base64 or path>' }, ...] and ensure base64 is stripped (keep paths as-is)
+
+    // Build full data URL for main image: prefer previewUrl (already a data URL)
+    if (this.previewUrl) {
+      payload.image = this.previewUrl;
+    } else if (payload.image) {
+      // wrap base64 with a default mime
+      payload.image = `data:image/jpeg;base64,${this.stripDataUrlHeader(payload.image)}`;
+    }
+
+    // Normalize gallery to [{ image: '<full data url>' , id } ...]
     const galArr = Array.isArray(payload.gallery) ? payload.gallery : [];
     payload.gallery = galArr.map((g: any) => {
       const val = (g && typeof g === 'object') ? (g.image ?? g.path ?? g.url ?? '') : g;
       const strVal = String(val || '');
-      // If it's a data URL, strip header; if it's raw base64 keep as-is; if it's a path keep path
-      const normalized = this.stripDataUrlHeader(strVal);
-      return { image: normalized };
+      const full = strVal.startsWith('data:') ? strVal : `data:image/jpeg;base64,${this.stripDataUrlHeader(strVal)}`;
+      const id = (g && typeof g === 'object' && g.id) ? g.id : uuidv4();
+      return { image: full, id };
     });
+
+    // Ensure sizeType contains ids
+    const sizes: any[] = Array.isArray(payload.sizeType) ? payload.sizeType : [];
+    payload.sizeType = sizes.map((s: any) => ({
+      type: s?.type,
+      cost: Number(s?.cost),
+      sale: Number(s?.sale),
+      id: s?.id ?? uuidv4(),
+    }));
+
+    // Additional flags
+    payload.hasVariant = !!payload.hasVariant;
+    payload.isAvailable = !!payload.isAvailable;
+    payload.prepration_time = Number(payload.prepration_time);
+    payload.isSync = 0;
+
+    // Ensure compatibility with stores using keyPath 'productId'
+    if (payload && payload.id && !payload.productId) {
+      payload.productId = payload.id;
+    }
+
     this.submitting = true;
-    const req$ = this.isUpdateMode ? this.productService.updateProduct(payload) : this.productService.addProduct(payload);
-    req$.subscribe({
-      next: () => {
+    console.log('Payload to save:', payload);
+    this.idb
+      .putAll('products', [payload])
+      .then(() => {
         this.submitting = false;
-        this.toast.success(this.isUpdateMode ? 'Product updated successfully' : 'Product added successfully');
+        this.toast.success(this.isUpdateMode ? 'Product saved locally' : 'Product saved locally');
         this.router.navigate(['/products/all-products']);
-      },
-      error: (err: any) => {
+      })
+      .catch((err) => {
         this.submitting = false;
-        const msg = err?.error?.message || (this.isUpdateMode ? 'Failed to update product' : 'Failed to add product');
-        this.toast.error(msg);
-      },
-    });
+        console.error('Failed to save product locally:', err);
+        this.toast.error('Failed to save product locally');
+      });
   }
 }

@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ProductService } from 'src/app/services/product.service';
+import { IdbService } from 'src/app/services/idb.service';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { ToastService } from 'src/app/services/toast.service';
@@ -14,7 +15,7 @@ export class CategoriesListComponent implements OnInit {
   categories: Array<{ id?: string; name?: string } & any> = [];
   deletingId: string | number | null = null;
 
-  constructor(private productService: ProductService, private router: Router, private toast: ToastService) {}
+  constructor(private productService: ProductService, private router: Router, private toast: ToastService, private idb: IdbService) {}
 
   ngOnInit(): void {
     this.fetch();
@@ -23,18 +24,17 @@ export class CategoriesListComponent implements OnInit {
   fetch() {
     this.loading = true;
     this.error = null;
-    this.productService.getAllCategories().subscribe({
-      next: (res) => {
-        // Support both array payloads or wrapped payloads
-        const data = Array.isArray(res) ? res : (res?.data || res?.categories || []);
-        this.categories = data;
+    this.idb
+      .getAll<any>('categories')
+      .then((list) => {
+        this.categories = Array.isArray(list) ? list : [];
         this.loading = false;
-      },
-      error: (err) => {
+      })
+      .catch(() => {
+        this.categories = [];
         this.loading = false;
-        this.error = err?.error?.message || 'Failed to load categories';
-      },
-    });
+        this.error = 'No local categories found in IndexedDB';
+      });
   }
 
   // Drag & drop handler to reorder categories locally

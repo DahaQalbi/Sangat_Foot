@@ -153,8 +153,8 @@ export class ManagersListComponent implements OnInit {
   public fullUrl(path?: string | null): string | null {
     const base = (environment as any)?.imgUrl || (environment as any)?.baseUrl || '';
     if (!path) return null;
-    // Avoid double prefix if already starts with http
-    if (/^https?:\/\//i.test(path)) return path;
+    // Avoid prefixing for absolute URLs or data URLs
+    if (/^https?:\/\//i.test(path) || /^data:/i.test(path)) return path;
     const baseNorm = base.endsWith('/') ? base.slice(0, -1) : base;
     const pathNorm = path.startsWith('/') ? path.slice(1) : path;
     return `${baseNorm}/${pathNorm}`;
@@ -349,9 +349,9 @@ export class ManagersListComponent implements OnInit {
         // Update in-memory list
         this.managers = (this.managers || []).map((m: any) => (m.id === id ? { ...m, name, email, phone, role: roleStr, image, cnic, agrement } : m));
         // Update IndexedDB record
-        const existing = await this.idb.getByKey<any>('managers', id);
+        const existing = await this.idb.getByKey<any>('users', id);
         const updated = { ...(existing || {}), id, name, email, phone, role: roleStr, image, cnic, agrement };
-        await this.idb.putAll('managers', [updated]);
+        await this.idb.putAll('users', [updated]);
       } catch {}
     };
 
@@ -421,6 +421,8 @@ export class ManagersListComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // Ensure no stale data is shown before reading from IndexedDB
+    this.managers = [];
     await this.loadFromCache();
     // Attempt to sync any pending staff records when page opens
     await this.staffSync.trySync();
@@ -489,74 +491,83 @@ export class ManagersListComponent implements OnInit {
       return;
     }
     const { managerId, role, email, password, name, phone } = this.addForm.value;
-    // Derive flat agreement fields per user request
-    const agrement: string | null = this.selectedAgreementBase64
-      || (typeof this.addForm.value?.agreement === 'object' ? this.addForm.value.agreement?.image : this.addForm.value?.agreement)
-      || null;
-    const extention: 'pdf' | 'image' | null = this.agreementFileType?.toLowerCase().includes('pdf') ? 'pdf' : (agrement ? 'image' : null);
 
-    const image: string | null = this.selectedImageBase64 || this.addForm.value?.image || null;
-    const cnic: string | null = this.selectedCnicBase64 || this.addForm.value?.cnic || null;
-
-    const roleStr = String(role || '').toLowerCase();
-    const basePayload: any = { name, password, phone, role: roleStr, email, image, cnic, agrement, extention };
-
-    // Helper to update UI and cache immediately
-    const appendLocally = async () => {
-      const created: any = {
-        id: Date.now(),
-        name,
-        email,
-        phone,
-        role: roleStr,
-        image,
-        cnic,
-        agrement,
-        extention,
-      };
-      // Append to in-memory list (exclude riders per page filter logic happens in fetch)
-      this.managers = [created, ...this.managers];
-      try {
-        await this.idb.putAll('managers', [created]);
-      } catch {
-        // ignore cache write errors
-      }
-    };
-
-    // If offline, queue and update locally without calling API
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      this.staffSync.queueStaff(basePayload).then(() => this.staffSync.trySync());
-      appendLocally();
-      this.toast.success('Saved offline. Will sync when online.');
-      this.closeAddSidebar();
-      return;
+    // Build image as full data URL like: data:image/png;base64,....
+    const mime = (this.imageFileType || '').toLowerCase();
+    const imgExt = (() => {
+      if (mime.startsWith('image/')) return mime.split('/')[1] || 'png';
+      return 'png';
+    })();
+    let image: string | null = null;
+    if (this.imagePreview) {
+      // imagePreview already contains a full data URL
+      image = this.imagePreview;
+    } else if (this.selectedImageBase64 && mime) {
+      image = `data:${mime};base64,${this.selectedImageBase64}`;
+    } else if (this.selectedImageBase64) {
+      image = `data:image/${imgExt};base64,${this.selectedImageBase64}`;
     }
 
+    // CNIC as full data URL (prefer preview which is already a data URL)
+    let cnic: string | null = null;
+    const cnicMime = (this.cnicFileType || '').toLowerCase();
+    const cnicExt = cnicMime.startsWith('image/') ? (cnicMime.split('/')[1] || 'png') : 'png';
+    if (this.cnicPreview) {
+      cnic = this.cnicPreview;
+    } else if (this.selectedCnicBase64 && cnicMime) {
+      cnic = `data:${cnicMime};base64,${this.selectedCnicBase64}`;
+    } else if (this.selectedCnicBase64) {
+      cnic = `data:image/${cnicExt};base64,${this.selectedCnicBase64}`;
+    }
+
+    // Agreement as full data URL
+    let agrement: string | null = null;
+    const agrMime = (this.agreementFileType || '').toLowerCase();
+    const agrExt = agrMime.startsWith('image/') ? (agrMime.split('/')[1] || 'png') : (agrMime.includes('pdf') ? 'pdf' : 'png');
+    if (this.agreementPreview) {
+      agrement = this.agreementPreview;
+    } else if (this.selectedAgreementBase64 && agrMime) {
+      agrement = `data:${agrMime};base64,${this.selectedAgreementBase64}`;
+    } else if (this.selectedAgreementBase64) {
+      agrement = `data:image/${agrExt};base64,${this.selectedAgreementBase64}`;
+    }
+
+    // extention should be the profile image extension like 'png'
+    const extention: string = imgExt || 'png';
+
+    const roleStr = String(role || '').toLowerCase();
+    const id = Number(managerId) || Date.now();
+    const created_at = new Date().toISOString();
+    const payload: any = {
+      id,
+      email,
+      password,
+      role: roleStr,
+      phone,
+      name,
+      cnic,
+      image,
+      agrement,
+      extention,
+      created_at,
+      isSync: 0,
+    };
+
+    // Save to IndexedDB 'users' collection only, do not call API
     this.submitting = true;
-    this.staffService.addManage(basePayload).subscribe({
-      next: () => {
+    this.idb
+      .putAll('users', [payload])
+      .then(() => {
         this.submitting = false;
-        this.removeAddCnic();
-        this.removeAddImage();
-        this.removeAddAgreement();
-        this.toast.success('Staff added successfully');
-        this.closeAddSidebar();
+        // Refresh list from IndexedDB to keep UI strictly in sync with 'users'
         this.fetchManagers();
-      },
-      error: async (err) => {
+        this.toast.success('Staff saved locally');
+        this.closeAddSidebar();
+      })
+      .catch(() => {
         this.submitting = false;
-        // Network error -> queue offline and update locally
-        if (!err || err.status === 0) {
-          await this.staffSync.queueStaff(basePayload);
-          await appendLocally();
-          this.toast.success('No internet. Saved offline and will sync later.');
-          this.closeAddSidebar();
-          return;
-        }
-        const msg = err?.error?.message || 'Failed to add manager';
-        this.toast.error(msg);
-      },
-    });
+        this.toast.error('Failed to save locally');
+      });
   }
 
   // ---- File handlers for Add Member ----
@@ -618,54 +629,34 @@ export class ManagersListComponent implements OnInit {
   }
 
   fetchManagers(): void {
-    // If offline, read from cache and do not call API
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      this.loading = true;
-      this.error = null;
-      this.idb.getAll<ManagerItem>('managers')
-        .then((cached) => {
-          this.managers = (cached || []) as any[];
-          this.loading = false;
-        })
-        .catch(() => {
-          this.loading = false;
-          this.error = 'Offline: no cached managers found';
-        });
-      return;
-    }
-
-    // Online: Background refresh if cache already filled
-    if (!this.managers.length) this.loading = true;
+    // Always read from IndexedDB 'users' store; do not call API
+    this.loading = true;
     this.error = null;
-    this.staffService.getManagers().subscribe({
-      next: async (list: ManagerItem[]) => {
-        const onlyManagers = (list || []).filter((m: any) => !this.isWaiter(m?.role));
-        this.managers = onlyManagers;
+    this.idb
+      .getAll<ManagerItem>('users')
+      .then((cached) => {
+        const list = Array.isArray(cached) ? cached : [];
+        // Do not filter by role; show all records from users collection
+        this.managers = list as any[];
         this.loading = false;
-        try {
-          await this.idb.clearStore('managers');
-          await this.idb.putAll('managers', onlyManagers as any[]);
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn('Failed to update managers cache', e);
-        }
-      },
-      error: (err) => {
+      })
+      .catch(() => {
         this.loading = false;
-        this.error = err?.error?.message || 'Failed to load managers';
-      },
-    });
+        this.managers = [];
+        this.error = 'No local users found in IndexedDB';
+      });
   }
 
   private async loadFromCache(): Promise<void> {
     try {
-      const cached = await this.idb.getAll<ManagerItem>('managers');
+      const cached = await this.idb.getAll<ManagerItem>('users');
       if (Array.isArray(cached) && cached.length) {
         this.managers = cached;
       }
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.warn('Failed to read managers cache', e);
+      console.warn('Failed to read users cache', e);
+      this.managers = [];
     }
   }
 
@@ -706,7 +697,7 @@ export class ManagersListComponent implements OnInit {
             // Update UI and cache immediately
             this.fetchManagers();
             this.managers = this.managers.filter((x) => x.id !== m.id);
-            this.idb.clearStore('managers').then(() => this.idb.putAll('managers', this.managers as any[]));
+            this.idb.clearStore('users').then(() => this.idb.putAll('users', this.managers as any[]));
           },
           error: (err) => {
             this.loading = false;

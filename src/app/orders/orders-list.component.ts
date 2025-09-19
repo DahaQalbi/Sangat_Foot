@@ -42,6 +42,8 @@ export class OrdersListComponent implements OnInit, OnDestroy {
         }
       }
     } catch {}
+    // Remove 'Pending' from status options for the selector
+    this.statusOptions = this.statusOptions.filter((st) => st !== OrderStatus.Pending);
     this.fetchOrders();
     // attempt a sync on load and when connection comes back
     this.syncPending().catch(() => {});

@@ -5,6 +5,7 @@ import { IdbService } from 'src/app/services/idb.service';
 import { Router } from '@angular/router';
 import { ToastService } from 'src/app/services/toast.service';
 import { ProductService } from 'src/app/services/product.service';
+import { OrderService } from 'src/app/services/order.service';
 import { environment } from 'src/environments/environment';
 
 @Component({
@@ -19,6 +20,9 @@ export class AddOrderComponent {
   error: string | null = null;
 
   products: any[] = [];
+  // Deals support
+  deals: any[] = [];
+  dealsLoading = false;
   search = '';
   categories: string[] = [];
   selectedCategory = 'All';
@@ -28,6 +32,9 @@ export class AddOrderComponent {
 
   // selected items: key by productId or id
   selected: Map<string | number, { product: any; qty: number }> = new Map();
+  // Embed TableInfo in sidebar
+  embedTableInfo = true;
+  embeddedOrderId: number = Date.now();
 
   // Modal state for size selection
   sizeModalOpen = false;
@@ -40,6 +47,11 @@ export class AddOrderComponent {
   customType = '';
   customCost: number | null = null;
   customSale: number | null = null;
+  // Guard to prevent accidental double-add from rapid click/bubble
+  private selectClickGuard = false;
+
+  // Memoized summary passed to child TableInfo to avoid rebinding every tick
+  selectedSummaryCache: { items: any[]; totalsale: number; totalcost: number } = { items: [], totalsale: 0, totalcost: 0 };
 
   // ----- Order Side Modal (Table Info) -----
   orderSidebarOpen = false;
@@ -59,6 +71,7 @@ export class AddOrderComponent {
     private router: Router,
     private toast: ToastService,
     private productService: ProductService,
+    private orderService: OrderService,
   ) {
     this.form = this.fb.group({
       customerName: [''],
@@ -132,11 +145,15 @@ export class AddOrderComponent {
         const data = Array.isArray(res) ? res : (res?.data || res?.products || []);
         this.products = data || [];
         this.computeCategories();
+        // After products load, also fetch deals (needs products to compute sizes/prices)
+        this.fetchDeals();
         try {
           // Save fresh copy to IndexedDB for offline use
           await this.idb.replaceAll('products', this.normalizedProductsForCache());
         } catch {}
         this.loading = false;
+        // Ensure summary is in sync on fresh load (in case something was preselected)
+        this.recomputeSelectedSummary();
       },
       error: async () => {
         // If API fails while online, fallback to cache
@@ -144,11 +161,97 @@ export class AddOrderComponent {
           const cached = await this.idb.getAll<any>('products');
           this.products = cached || [];
           this.computeCategories();
+          // Merge any prefillItems (e.g., from Add Product page) into left-side selection so Table Info reflects them
+          try {
+            const prefillItems = (history.state && (history.state as any).prefillItems) || null;
+            const items = Array.isArray(prefillItems) ? prefillItems : [];
+            for (const it of items) {
+              const p: any = {
+                id: it?.productId ?? it?.id,
+                productId: it?.productId ?? it?.id,
+                name: it?.name,
+                price: it?.selectedSize?.sale,
+                sizeType: [{ type: it?.selectedSize?.type, sale: it?.selectedSize?.sale, cost: it?.selectedSize?.cost }],
+              };
+              const sel = {
+                type: String(it?.selectedSize?.type || 'Default'),
+                sale: Number(it?.selectedSize?.sale || 0) || 0,
+                cost: Number(it?.selectedSize?.cost || 0) || 0,
+              };
+              this.addOrIncSelection(p, sel as any, Number(it?.qty || 1));
+            }
+          } catch {}
+          this.onRecalc();
+          this.recomputeSelectedSummary();
         } catch {}
         this.loading = false;
         this.error = 'Failed to load products';
+        // Even if products API fails, attempt deals (may still work)
+        this.fetchDeals();
       },
     });
+  }
+
+  private fetchDeals(): void {
+    this.dealsLoading = true;
+    this.error = null;
+    this.orderService.getAllDeals().subscribe({
+      next: (res: any) => {
+        const data = Array.isArray(res) ? res : (res?.data || res?.deals || []);
+        this.deals = data || [];
+        this.dealsLoading = false;
+      },
+      error: () => {
+        this.dealsLoading = false;
+      },
+    });
+  }
+
+  private findProduct(productId: any): any | null {
+    const pid = String(productId);
+    return (this.products || []).find((p: any) => String(p?.productId ?? p?.id) === pid) || null;
+  }
+
+  private buildSummaryFromDeal(deal: any): { items: any[] } {
+    const items = (deal?.items || deal?.dealItem || []).map((it: any) => {
+      const p = this.findProduct(it.product_id) || {};
+      const sizes = Array.isArray(p?.sizeType) ? p.sizeType : [];
+      const match = sizes.find((s: any) => String(s?.type) === String(it?.sizeType)) || {};
+      const selectedSize = {
+        type: String(it?.sizeType || match?.type || 'Default'),
+        sale: Number(match?.sale ?? 0) || 0,
+        cost: Number(match?.cost ?? 0) || 0,
+      };
+      return {
+        qty: Number(it?.quantity) || 1,
+        productId: it?.product_id,
+        name: p?.name || `Item #${it?.product_id}`,
+        selectedSize,
+        productRef: p,
+      };
+    });
+    return { items };
+  }
+
+  addDealToSelection(deal: any) {
+    const s = this.buildSummaryFromDeal(deal);
+    for (const it of s.items) {
+      const keyBase = it.productId ?? it.productRef?.productId ?? it.productRef?.id;
+      const type = it.selectedSize?.type || 'Default';
+      const key = `${keyBase}_${type}`;
+      const entry = {
+        ...(it.productRef || {}),
+        selectedSize: { ...it.selectedSize },
+      };
+      if (this.selected.has(key)) {
+        const prev = this.selected.get(key)!;
+        prev.qty += Number(it.qty) || 0;
+        this.selected.set(key, prev);
+      } else {
+        this.selected.set(key, { product: entry, qty: Number(it.qty) || 1 });
+      }
+    }
+    this.recomputeSelectedSummary();
   }
 
   private normalizedProductsForCache(): any[] {
@@ -201,15 +304,38 @@ export class AddOrderComponent {
   }
 
   toggleSelect(p: any): void {
-    // Open size selection modal instead of immediate toggle
-    this.openSizeModal(p);
+    // Throttle to avoid duplicate adds from double events / rapid click
+    if (this.selectClickGuard) return;
+    this.selectClickGuard = true;
+    setTimeout(() => { this.selectClickGuard = false; }, 250);
+    try {
+      const sizes = Array.isArray(p?.sizeType) ? p.sizeType : [];
+      // If multiple sizes, open chooser modal
+      if (sizes.length > 1) {
+        this.openSizeModal(p);
+        return;
+      }
+      // Determine selected size (single size or default)
+      let sel: { type: string; sale: number; cost?: number } = { type: 'Default', sale: 0 };
+      if (sizes.length === 1) {
+        const s = sizes[0] || {};
+        sel = { type: s.type || 'Default', sale: Number(s.sale ?? s.price ?? 0) || 0, cost: Number(s.cost ?? 0) };
+      } else {
+        sel = { type: 'Default', sale: Number(p?.price ?? 0) || 0, cost: 0 };
+      }
+      this.addOrIncSelection(p, sel, 1);
+    } catch {
+      // fallback to modal if anything unexpected happens
+      this.openSizeModal(p);
+    }
   }
 
   inc(p: any): void {
     const base = p?.productId ?? p?.id;
     const key = p?.selectedSize ? `${base}_${p.selectedSize.type || 'Default'}` : String(base);
     const row = this.selected.get(key);
-    if (row) row.qty += 1;
+    if (row) { row.qty += 1; this.selected.set(key, row); }
+    this.recomputeSelectedSummary();
   }
 
   dec(p: any): void {
@@ -219,6 +345,41 @@ export class AddOrderComponent {
     if (!row) return;
     row.qty -= 1;
     if (row.qty <= 0) this.selected.delete(key);
+    else this.selected.set(key, row);
+    this.recomputeSelectedSummary();
+  }
+
+  // Receive qty updates from embedded TableInfo and sync to parent cart
+  onChildQtyChanged(evt: { productId: any; size: string; qty: number }): void {
+    try {
+      const base = evt?.productId;
+      const type = (evt?.size || 'Default').toString();
+      const key = `${base}_${type}`;
+      if (!this.selected.has(key)) return; // ignore unknown rows
+      if (evt.qty <= 0) {
+        this.selected.delete(key);
+      } else {
+        const row = this.selected.get(key)!;
+        row.qty = Number(evt.qty) || 1;
+        this.selected.set(key, row);
+      }
+      this.recomputeSelectedSummary();
+    } catch {}
+  }
+
+  private addOrIncSelection(product: any, selectedSize: { type: string; sale: number; cost?: number }, qty: number) {
+    const base = product?.productId ?? product?.id;
+    const type = selectedSize?.type || 'Default';
+    const key = `${base}_${type}`;
+    const entry = { ...product, selectedSize: { ...selectedSize } };
+    if (this.selected.has(key)) {
+      const prev = this.selected.get(key)!;
+      prev.qty += Number(qty) || 1;
+      this.selected.set(key, prev);
+    } else {
+      this.selected.set(key, { product: entry, qty: Number(qty) || 1 });
+    }
+    this.recomputeSelectedSummary();
   }
 
   get totalItems(): number {
@@ -243,6 +404,31 @@ export class AddOrderComponent {
     let t = 0;
     this.selected.forEach(({ product, qty }) => { t += this.priceOf(product) * qty; });
     return t;
+  }
+
+  // Build summary for embedded TableInfo component
+  private recomputeSelectedSummary(): void {
+    const items = Array.from(this.selected.values()).map(({ product, qty }) => {
+      const p = product || {};
+      const sel = p.selectedSize || {};
+      const first = Array.isArray(p.sizeType) && p.sizeType.length ? p.sizeType[0] : {};
+      const selectedSize = {
+        type: sel.type ?? first.type ?? 'Default',
+        sale: Number(sel.sale ?? first.sale ?? p.price ?? 0) || 0,
+        cost: Number(sel.cost ?? first.cost ?? 0) || 0,
+      };
+      const category = (p.category && (p.category.name || p.category)) || p.category_id || '';
+      return {
+        qty,
+        productId: p?.productId ?? p?.id,
+        name: p?.name,
+        category,
+        selectedSize,
+      };
+    });
+    const totalsale = items.reduce((a, r) => a + r.selectedSize.sale * r.qty, 0);
+    const totalcost = items.reduce((a, r) => a + r.selectedSize.cost * r.qty, 0);
+    this.selectedSummaryCache = { items, totalsale, totalcost };
   }
 
   async createOrder() {

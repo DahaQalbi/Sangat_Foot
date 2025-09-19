@@ -17,6 +17,10 @@ export class AddProductComponent implements OnInit {
   galleryPreviews: string[] = [];
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('galleryInput') galleryInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('descEditor') descEditor!: ElementRef<HTMLDivElement>;
+  @ViewChild('quillEditor') quillEditorRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('quillToolbar') quillToolbarRef!: ElementRef<HTMLDivElement>;
+  private quill: any;
   // edit mode
   isUpdateMode = false;
   editingId: string | number | null = null;
@@ -36,6 +40,8 @@ export class AddProductComponent implements OnInit {
     this.fetchCategories();
     // Ensure at least one size row initially
     if (this.sizeType.length === 0) this.addSizeType();
+    // Ensure hasVariant reflects current sizeType length on init
+    this.updateHasVariantFromSizeType();
     // React to hasVariant toggle: when enabled ensure at least one size row; when disabled clear rows
     const hv = this.form.get('hasVariant');
     hv?.valueChanges.subscribe((val: boolean) => {
@@ -66,7 +72,8 @@ export class AddProductComponent implements OnInit {
           description: product?.description || '',
           prepration_time: Number(product?.prepration_time ?? product?.preparation_time ?? 0) || null,
           isAvailable: String(product?.isAvailable ?? '').toString() === '1' ? true : !!product?.isAvailable,
-          hasVariant: Array.isArray(product?.sizeType) && product.sizeType.length > 0,
+          // initial guess; will be corrected after sizeType array is populated below
+          hasVariant: Array.isArray(product?.sizeType) && product.sizeType.length > 1,
         });
         // preview existing main image
         if (product?.image) {
@@ -99,8 +106,35 @@ export class AddProductComponent implements OnInit {
           // keep one default row
           this.addSizeType();
         }
+        // After populating sizeType, ensure hasVariant matches (> 1 rows)
+        this.updateHasVariantFromSizeType();
       }
     } catch {}
+
+    // Initialize Quill after view is ready (use microtask to ensure template references exist)
+    Promise.resolve().then(() => {
+      try {
+        const QuillGlobal: any = (window as any).Quill;
+        if (!QuillGlobal || !this.quillEditorRef) return;
+        this.quill = new QuillGlobal(this.quillEditorRef.nativeElement, {
+          theme: 'snow',
+          placeholder: 'Short description of the product',
+          modules: {
+            toolbar: this.quillToolbarRef?.nativeElement || true,
+          },
+        });
+        // Seed initial value
+        const initial = this.form.value.description || '';
+        if (initial) {
+          this.quill.root.innerHTML = initial;
+        }
+        // On change, sync to form
+        this.quill.on('text-change', () => {
+          const html: string = this.quill.root.innerHTML;
+          this.form.patchValue({ description: html });
+        });
+      } catch {}
+    });
   }
 
   private resolveCategorySelection(): void {
@@ -155,6 +189,8 @@ export class AddProductComponent implements OnInit {
       sale: ['', [Validators.required]],
     });
     this.sizeType.push(group);
+    // Update hasVariant when size rows increase
+    this.updateHasVariantFromSizeType();
   }
 
   removeSizeType(index: number) {
@@ -164,6 +200,15 @@ export class AddProductComponent implements OnInit {
       return;
     }
     this.sizeType.removeAt(index);
+    // Update hasVariant when size rows decrease
+    this.updateHasVariantFromSizeType();
+  }
+
+  private updateHasVariantFromSizeType(): void {
+    const hvCtrl = this.form?.get('hasVariant');
+    if (!hvCtrl) return;
+    const want = this.sizeType.length > 1;
+    hvCtrl.setValue(want, { emitEvent: false });
   }
 
   fetchCategories() {
@@ -232,6 +277,51 @@ export class AddProductComponent implements OnInit {
     if (this.imageInputRef && this.imageInputRef.nativeElement) {
       this.imageInputRef.nativeElement.value = '';
     }
+  }
+
+  // ----- WYSIWYG description helpers -----
+  exec(cmd: string) {
+    try {
+      this.descEditor?.nativeElement?.focus();
+      document.execCommand(cmd, false);
+      // Sync content back to form
+      this.onDescInput();
+    } catch {}
+  }
+  setLink() {
+    try {
+      const url = prompt('Enter URL');
+      if (!url) return;
+      this.descEditor?.nativeElement?.focus();
+      document.execCommand('createLink', false, url);
+      this.onDescInput();
+    } catch {}
+  }
+  onDescInput(_e?: Event) {
+    const html = this.descEditor?.nativeElement?.innerHTML || '';
+    this.form.patchValue({ description: html });
+  }
+
+  // ---- Quick add to current order (navigates with prefillItems) ----
+  addToOrder(): void {
+    try {
+      const name = (this.form.value?.name || '').toString();
+      const sizes: any[] = (this.sizeType?.value as any[]) || [];
+      const first = sizes[0] || {};
+      const selectedSize = {
+        type: String(first?.type || 'Default'),
+        sale: Number(first?.sale || 0) || 0,
+        cost: Number(first?.cost || 0) || 0,
+      };
+      const productId = this.editingId ?? `temp_${Date.now()}`;
+      this.router.navigate(['/orders/add'], {
+        state: {
+          prefillItems: [
+            { productId, name, qty: 1, selectedSize },
+          ],
+        },
+      });
+    } catch {}
   }
 
   private toBase64(file: File): Promise<string> {
